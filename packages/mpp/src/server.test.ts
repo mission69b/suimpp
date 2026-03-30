@@ -5,33 +5,30 @@ const RECIPIENT = '0xrecipient_address';
 const SENDER = '0xsender_address';
 
 function buildMockTx({
-  status = 'success',
+  success = true,
   coinType = USDC_TYPE,
   recipientAddr = RECIPIENT,
   amount = '10000',
   senderAddr = SENDER,
 }: {
-  status?: string;
+  success?: boolean;
   coinType?: string;
   recipientAddr?: string;
   amount?: string;
   senderAddr?: string;
 } = {}) {
-  return {
-    effects: { status: { status } },
+  const txData = {
+    digest: '0xdigest123',
+    status: { success },
     balanceChanges: [
-      {
-        coinType,
-        owner: { AddressOwner: recipientAddr },
-        amount,
-      },
-      {
-        coinType,
-        owner: { AddressOwner: senderAddr },
-        amount: `-${amount}`,
-      },
+      { coinType, address: recipientAddr, amount },
+      { coinType, address: senderAddr, amount: `-${amount}` },
     ],
   };
+
+  return success
+    ? { Transaction: txData, FailedTransaction: undefined }
+    : { Transaction: undefined, FailedTransaction: txData };
 }
 
 function buildCredential(digest = '0xdigest123', amount = '0.01') {
@@ -47,13 +44,14 @@ function buildCredential(digest = '0xdigest123', amount = '0.01') {
   };
 }
 
-const mockGetTxBlock = vi.fn();
+const mockGetTransaction = vi.fn();
 
-vi.mock('@mysten/sui/jsonRpc', () => ({
-  SuiJsonRpcClient: vi.fn().mockImplementation(() => ({
-    getTransactionBlock: mockGetTxBlock,
+vi.mock('@mysten/sui/grpc', () => ({
+  SuiGrpcClient: vi.fn().mockImplementation(() => ({
+    core: {
+      getTransaction: mockGetTransaction,
+    },
   })),
-  getJsonRpcFullnodeUrl: vi.fn(() => 'https://fullnode.mainnet.sui.io'),
 }));
 
 vi.mock('@mysten/sui/utils', () => ({
@@ -70,7 +68,7 @@ describe('server verify', () => {
   });
 
   it('accepts valid payment with correct amount', async () => {
-    mockGetTxBlock.mockResolvedValue(buildMockTx());
+    mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
       currency: USDC_TYPE,
@@ -86,7 +84,7 @@ describe('server verify', () => {
   });
 
   it('rejects failed transaction', async () => {
-    mockGetTxBlock.mockResolvedValue(buildMockTx({ status: 'failure' }));
+    mockGetTransaction.mockResolvedValue(buildMockTx({ success: false }));
 
     const serverMethod = suiFn({
       currency: USDC_TYPE,
@@ -99,7 +97,7 @@ describe('server verify', () => {
   });
 
   it('rejects when payment not sent to recipient', async () => {
-    mockGetTxBlock.mockResolvedValue(
+    mockGetTransaction.mockResolvedValue(
       buildMockTx({ recipientAddr: '0xwrong_address' }),
     );
 
@@ -114,7 +112,7 @@ describe('server verify', () => {
   });
 
   it('rejects when amount is less than requested', async () => {
-    mockGetTxBlock.mockResolvedValue(buildMockTx({ amount: '5000' }));
+    mockGetTransaction.mockResolvedValue(buildMockTx({ amount: '5000' }));
 
     const serverMethod = suiFn({
       currency: USDC_TYPE,
@@ -127,9 +125,12 @@ describe('server verify', () => {
   });
 
   it('rejects when no balance changes', async () => {
-    mockGetTxBlock.mockResolvedValue({
-      effects: { status: { status: 'success' } },
-      balanceChanges: [],
+    mockGetTransaction.mockResolvedValue({
+      Transaction: {
+        digest: '0xdigest123',
+        status: { success: true },
+        balanceChanges: [],
+      },
     });
 
     const serverMethod = suiFn({

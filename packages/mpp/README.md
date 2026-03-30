@@ -47,11 +47,11 @@ No webhooks. No Stripe dashboard. No KYC. USDC arrives directly in your wallet.
 ```typescript
 import { sui } from '@mppsui/mpp/client';
 import { Mppx } from 'mppx/client';
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
-const client = new SuiJsonRpcClient({
-  url: getJsonRpcFullnodeUrl('mainnet'),
+const client = new SuiGrpcClient({
+  baseUrl: 'https://fullnode.mainnet.sui.io:443',
   network: 'mainnet',
 });
 const signer = Ed25519Keypair.deriveKeypair('your mnemonic');
@@ -106,26 +106,27 @@ Agent                    API Server
   │── USDC transfer on Sui ──│  (~400ms finality)
   │                          │
   │── GET /resource ────────>│
-  │   + payment credential   │── verify TX on-chain via RPC
+  │   + payment credential   │── verify TX on-chain via gRPC
   │   (Sui tx digest)        │
   │<── 200 OK + data ────────│
 ```
 
-No facilitator. No intermediary. The server verifies the Sui transaction directly via RPC.
+No facilitator. No intermediary. The server verifies the Sui transaction directly via gRPC.
 
 ## Server API
 
 ### `sui(options)`
 
-Creates a Sui USDC payment method for the server.
+Creates a Sui payment method for the server.
 
 ```typescript
 import { sui } from '@mppsui/mpp/server';
 
 const method = sui({
-  currency: SUI_USDC,         // Sui coin type for USDC
+  currency: SUI_USDC,         // Sui coin type (e.g. USDC)
   recipient: '0xYOUR_ADDR',   // Where payments are sent
-  rpcUrl: '...',               // Optional: custom RPC endpoint
+  decimals: 6,                // Optional: currency decimals (default: 6)
+  rpcUrl: '...',              // Optional: custom gRPC endpoint
   network: 'mainnet',         // Optional: 'mainnet' | 'testnet' | 'devnet'
 });
 ```
@@ -139,15 +140,16 @@ Verification checks:
 
 ### `sui(options)`
 
-Creates a Sui USDC payment method for the client.
+Creates a Sui payment method for the client.
 
 ```typescript
 import { sui } from '@mppsui/mpp/client';
 
 const method = sui({
-  client: suiJsonRpcClient,    // SuiJsonRpcClient instance
-  signer: ed25519Keypair,      // TransactionSigner (Ed25519Keypair works)
-  execute: async (tx) => {     // Optional: custom execution (gas sponsor, etc.)
+  client: grpcClient,            // Any Sui client (SuiGrpcClient, etc.)
+  signer: ed25519Keypair,        // Signer from @mysten/sui/cryptography
+  decimals: 6,                   // Optional: currency decimals (default: 6)
+  execute: async (tx) => {       // Optional: custom execution (gas sponsor, etc.)
     return myGasManager.execute(tx);
   },
 });
@@ -155,18 +157,14 @@ const method = sui({
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `client` | `SuiJsonRpcClient` | Yes | Sui RPC client instance |
-| `signer` | `TransactionSigner` | Yes | Any object with `getAddress()` and `signTransaction()` — `Ed25519Keypair` works |
+| `client` | `ClientWithCoreApi` | Yes | Any Sui client implementing the core API |
+| `signer` | `Signer` | Yes | Any `Signer` from `@mysten/sui/cryptography` — `Ed25519Keypair` works |
+| `decimals` | `number` | No | Decimal places for the currency (default: 6) |
 | `execute` | `(tx: Transaction) => Promise<{ digest: string }>` | No | Override transaction execution (e.g. gas sponsor/manager) |
 
-The client:
-- Fetches all USDC coins (handles Sui pagination, max 50 per page)
-- Checks balance before building the transaction
-- Merges fragmented coins into a single payment
-- Signs and broadcasts the transaction (or delegates to `execute` if provided)
-- Returns the digest as the payment credential
+The client uses the [`coinWithBalance`](https://sdk.mystenlabs.com/sui/transaction-building/intents) intent to automatically resolve, merge, and split coins for the exact payment amount, then signs and broadcasts the transaction (or delegates to `execute` if provided).
 
-## Utilities
+## Constants
 
 ### `SUI_USDC_TYPE`
 
@@ -177,9 +175,7 @@ import { SUI_USDC_TYPE } from '@mppsui/mpp';
 // '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC'
 ```
 
-### `fetchCoins(client, owner, coinType)`
-
-Fetches all coins of a given type, handling Sui's pagination (max 50 per page).
+## Utilities
 
 ### `parseAmountToRaw(amount, decimals)`
 
@@ -199,12 +195,12 @@ MPP is chain-agnostic. We chose Sui because agent payments need:
 | **Finality** | ~400ms |
 | **Gas** | <$0.001 per payment |
 | **USDC** | Circle-issued, native |
-| **Verification** | Direct RPC — no facilitator |
+| **Verification** | Direct gRPC — no facilitator |
 
 ## Testing
 
 ```bash
-pnpm --filter @mppsui/mpp test    # 16 tests
+pnpm --filter @mppsui/mpp test    # 13 tests
 pnpm --filter @mppsui/mpp typecheck
 ```
 

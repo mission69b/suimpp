@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { parseAmountToRaw, fetchCoins } from './utils.js';
+import { describe, it, expect } from 'vitest';
+import { parseAmountToRaw } from './utils.js';
 
 describe('parseAmountToRaw', () => {
   it('converts whole number', () => {
@@ -20,73 +20,5 @@ describe('parseAmountToRaw', () => {
 
   it('truncates below precision', () => {
     expect(parseAmountToRaw('0.0000001', 6)).toBe(0n);
-  });
-});
-
-describe('fetchCoins', () => {
-  it('returns all coins from single page', async () => {
-    const coins = [
-      { coinObjectId: '0xa', balance: '500000' },
-      { coinObjectId: '0xb', balance: '300000' },
-    ];
-    const mockClient = {
-      getCoins: vi.fn().mockResolvedValue({
-        data: coins,
-        hasNextPage: false,
-        nextCursor: null,
-      }),
-    };
-
-    const result = await fetchCoins(
-      mockClient as any,
-      '0xowner',
-      '0x::usdc::USDC',
-    );
-    expect(result).toEqual(coins);
-    expect(mockClient.getCoins).toHaveBeenCalledTimes(1);
-  });
-
-  it('paginates across multiple pages', async () => {
-    const page1 = [{ coinObjectId: '0xa', balance: '500000' }];
-    const page2 = [{ coinObjectId: '0xb', balance: '300000' }];
-    const mockClient = {
-      getCoins: vi
-        .fn()
-        .mockResolvedValueOnce({
-          data: page1,
-          hasNextPage: true,
-          nextCursor: 'cursor1',
-        })
-        .mockResolvedValueOnce({
-          data: page2,
-          hasNextPage: false,
-          nextCursor: null,
-        }),
-    };
-
-    const result = await fetchCoins(
-      mockClient as any,
-      '0xowner',
-      '0x::usdc::USDC',
-    );
-    expect(result).toEqual([...page1, ...page2]);
-    expect(mockClient.getCoins).toHaveBeenCalledTimes(2);
-  });
-
-  it('returns empty array when no coins', async () => {
-    const mockClient = {
-      getCoins: vi.fn().mockResolvedValue({
-        data: [],
-        hasNextPage: false,
-        nextCursor: null,
-      }),
-    };
-
-    const result = await fetchCoins(
-      mockClient as any,
-      '0xowner',
-      '0x::usdc::USDC',
-    );
-    expect(result).toEqual([]);
   });
 });
