@@ -1,0 +1,15 @@
+{
+  "name": "mppsui",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^2"
+  },
+  "packageManager": "pnpm@10.6.2"
+}
