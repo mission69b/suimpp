@@ -1,6 +1,6 @@
 {
   "name": "@mppsui/mpp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sui USDC payment method for the Machine Payments Protocol (MPP)",
   "type": "module",
   "main": "./dist/index.cjs",
