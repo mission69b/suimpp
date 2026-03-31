@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Nav } from './components/Nav';
 import { Terminal } from './components/Terminal';
 import { LiveFeed } from './components/LiveFeed';
+import { TopServers } from './components/TopServers';
 import { Stats } from './components/Stats';
 import { Footer } from './components/Footer';
 
@@ -56,9 +57,24 @@ export default function Home() {
         </section>
 
         {/* Live Feed */}
-        <section className="px-6 pb-20">
+        <section className="px-6 pb-12">
           <div className="max-w-5xl mx-auto">
             <LiveFeed />
+          </div>
+        </section>
+
+        {/* Top Servers */}
+        <section className="px-6 pb-20">
+          <div className="max-w-5xl mx-auto">
+            <Suspense
+              fallback={
+                <div className="rounded-lg border border-border bg-surface p-6">
+                  <div className="h-32 bg-border/20 rounded animate-pulse" />
+                </div>
+              }
+            >
+              <TopServers />
+            </Suspense>
           </div>
         </section>
       </main>
