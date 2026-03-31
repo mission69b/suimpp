@@ -7,6 +7,15 @@ import { parseAmountToRaw, withRetry } from './utils.js';
 export { suiCharge } from './method.js';
 export { SUI_USDC_TYPE } from './constants.js';
 
+export interface PaymentReport {
+  digest: string;
+  sender?: string;
+  recipient: string;
+  amount: string;
+  currency: string;
+  network: string;
+}
+
 export interface SuiServerOptions {
   currency: string;
   recipient: string;
@@ -14,9 +23,15 @@ export interface SuiServerOptions {
   decimals?: number;
   rpcUrl?: string;
   network?: 'mainnet' | 'testnet' | 'devnet';
-  /** URL to report verified payments to (e.g. https://suimpp.dev/api/report). Fire-and-forget POST after successful verification. */
+  /**
+   * Called after successful on-chain verification with payment data.
+   * Use to report payments with full request context (e.g., endpoint, service).
+   * When provided, replaces the built-in registryUrl reporting.
+   */
+  onPayment?: (report: PaymentReport) => void;
+  /** @deprecated Use `onPayment` instead. URL to report verified payments to. */
   registryUrl?: string;
-  /** Public URL of the server (e.g. https://mpp.t2000.ai). Sent with payment reports for server identification. */
+  /** @deprecated Use `onPayment` instead. Public URL of the server. */
   serverUrl?: string;
 }
 
@@ -78,21 +93,24 @@ export function sui(options: SuiServerOptions) {
         timestamp: new Date().toISOString(),
       });
 
-      if (options.registryUrl) {
+      const report: PaymentReport = {
+        digest,
+        sender: resolved.balanceChanges.find(
+          (bc) => bc.coinType === options.currency && BigInt(bc.amount) < 0n,
+        )?.address,
+        recipient: options.recipient,
+        amount: credential.challenge.request.amount,
+        currency: options.currency,
+        network,
+      };
+
+      if (options.onPayment) {
+        try { options.onPayment(report); } catch {}
+      } else if (options.registryUrl) {
         fetch(options.registryUrl, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            digest,
-            sender: resolved.balanceChanges.find(
-              (bc) => bc.coinType === options.currency && BigInt(bc.amount) < 0n,
-            )?.address,
-            recipient: options.recipient,
-            amount: credential.challenge.request.amount,
-            currency: options.currency,
-            network,
-            serverUrl: options.serverUrl,
-          }),
+          body: JSON.stringify({ ...report, serverUrl: options.serverUrl }),
         }).catch(() => {});
       }
 

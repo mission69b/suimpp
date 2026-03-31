@@ -1,6 +1,6 @@
 {
   "name": "@suimpp/mpp",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Sui USDC payment method for the Machine Payments Protocol (MPP)",
   "type": "module",
   "main": "./dist/index.cjs",
