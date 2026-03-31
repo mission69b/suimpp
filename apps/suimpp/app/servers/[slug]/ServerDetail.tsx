@@ -267,6 +267,9 @@ function EndpointsTable({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border/50">
+              <th className="text-left px-4 py-2 font-medium text-muted/60 text-[10px] uppercase tracking-wider w-16">
+                Method
+              </th>
               <th className="text-left px-4 py-2 font-medium text-muted/60 text-[10px] uppercase tracking-wider">
                 Endpoint
               </th>
@@ -281,6 +284,9 @@ function EndpointsTable({
           <tbody className="divide-y divide-border/30">
             {endpoints.map((ep, i) => (
               <tr key={i} className="group/row hover:bg-border/5 transition-colors">
+                <td className="px-4 py-2 font-mono text-muted/60 uppercase w-16">
+                  {ep.method}
+                </td>
                 <td className="px-4 py-2 font-mono text-muted">
                   <CopyableText text={ep.path} copyValue={`${serverUrl}${ep.path}`} />
                 </td>
