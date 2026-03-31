@@ -26,6 +26,8 @@ No API keys. No subscriptions. Agents pay per request via on-chain micropayments
 
 ## Links
 
+- Sui charge method spec: https://suimpp.dev/spec
+- Developer guide: https://suimpp.dev/docs
 - Protocol spec: https://mpp.dev
 - GitHub: https://github.com/mission69b/suimpp
 - First server: https://mpp.t2000.ai (40 services, 88 endpoints)

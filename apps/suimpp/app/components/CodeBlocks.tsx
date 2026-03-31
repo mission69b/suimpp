@@ -1,3 +1,7 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+
 function CodeBlock({
   title,
   code,
@@ -9,10 +13,26 @@ function CodeBlock({
   cta: string;
   href: string;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [code]);
+
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden flex flex-col">
-      <div className="px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <span className="text-sm font-medium">{title}</span>
+        <button
+          onClick={handleCopy}
+          className="px-2 py-0.5 rounded text-[10px] font-mono text-muted hover:text-accent hover:border-accent/40 border border-transparent transition-all cursor-pointer"
+          aria-label="Copy to clipboard"
+        >
+          {copied ? 'copied' : 'copy'}
+        </button>
       </div>
       <pre className="p-4 font-mono text-xs leading-relaxed text-muted flex-1 overflow-x-auto">
         <code>{code}</code>

@@ -7,6 +7,12 @@ export function Nav() {
         suimpp.dev
       </Link>
       <div className="flex items-center gap-6 text-sm text-muted">
+        <Link href="/spec" className="hover:text-text transition-colors">
+          Spec
+        </Link>
+        <Link href="/docs" className="hover:text-text transition-colors">
+          Docs
+        </Link>
         <Link href="/servers" className="hover:text-text transition-colors">
           Servers
         </Link>
