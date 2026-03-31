@@ -255,32 +255,17 @@ function EndpointsTable({
   txnsByEndpoint: Record<string, number>;
   serverUrl: string;
 }) {
-  const [filter, setFilter] = useState('');
-
-  const filtered = filter
-    ? endpoints.filter((ep) =>
-        ep.path.toLowerCase().includes(filter.toLowerCase()),
-      )
-    : endpoints;
-
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border gap-3">
-        <h3 className="text-sm font-medium shrink-0">Endpoints</h3>
-        <input
-          type="text"
-          placeholder="Filter endpoints..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="flex-1 max-w-xs bg-transparent border border-border rounded px-2.5 py-1 text-xs text-text placeholder:text-muted/40 focus:outline-none focus:border-accent/50"
-        />
-        <span className="text-[11px] font-mono text-muted shrink-0">
-          {filtered.length} of {endpoints.length}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <h3 className="text-sm font-medium">Endpoints</h3>
+        <span className="text-[11px] font-mono text-muted">
+          {endpoints.length} total
         </span>
       </div>
-      <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+      <div className="overflow-x-auto">
         <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-surface">
+          <thead>
             <tr className="border-b border-border/50">
               <th className="text-left px-4 py-2 font-medium text-muted/60 text-[10px] uppercase tracking-wider">
                 Endpoint
@@ -294,7 +279,7 @@ function EndpointsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border/30">
-            {filtered.map((ep, i) => (
+            {endpoints.map((ep, i) => (
               <tr key={i} className="group/row hover:bg-border/5 transition-colors">
                 <td className="px-4 py-2 font-mono text-muted">
                   <CopyableText text={ep.path} copyValue={`${serverUrl}${ep.path}`} />
