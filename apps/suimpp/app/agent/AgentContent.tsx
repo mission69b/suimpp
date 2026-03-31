@@ -36,7 +36,7 @@ export function AgentContent() {
           Gasless onboarding with USDC sponsorship — start using APIs immediately.
         </p>
         <a
-          href="https://t2000.ai"
+          href="https://app.t2000.ai"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block text-sm px-5 py-2.5 rounded-md border border-border text-text hover:border-accent/50 transition-colors"
