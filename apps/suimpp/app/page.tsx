@@ -6,6 +6,7 @@ import { CodeBlocks } from './components/CodeBlocks';
 import { Stats } from './components/Stats';
 import { Footer } from './components/Footer';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
 export default function Home() {
