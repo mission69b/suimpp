@@ -354,7 +354,7 @@ function ServiceGroupCard({
   group: ServiceGroup;
   txnsByEndpoint: Record<string, number>;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
@@ -385,9 +385,9 @@ function ServiceGroupCard({
           <table className="w-full text-xs">
             <tbody className="divide-y divide-border/30">
               {group.endpoints.map((ep, i) => (
-                <tr key={i} className="hover:bg-border/5 transition-colors">
+                <tr key={i} className="group/row hover:bg-border/5 transition-colors">
                   <td className="px-4 py-2 font-mono text-muted">
-                    {ep.path}
+                    <CopyableText text={ep.path} />
                   </td>
                   <td className="px-4 py-2 font-mono text-muted/60 hidden sm:table-cell w-16">
                     {ep.method}
@@ -405,6 +405,28 @@ function ServiceGroupCard({
         </div>
       )}
     </div>
+  );
+}
+
+function CopyableText({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      className="text-left font-mono text-muted hover:text-text transition-colors cursor-pointer"
+      title="Click to copy"
+    >
+      {text}
+      <span className="ml-1.5 text-[10px] text-muted/40 opacity-0 group-hover/row:opacity-100 transition-opacity">
+        {copied ? '✓' : '⎘'}
+      </span>
+    </button>
   );
 }
 
