@@ -16,6 +16,9 @@ export function Nav() {
         <Link href="/servers" className="hover:text-text transition-colors">
           Servers
         </Link>
+        <Link href="/explorer" className="hover:text-text transition-colors">
+          Explorer
+        </Link>
         <a
           href="https://github.com/mission69b/suimpp"
           target="_blank"
