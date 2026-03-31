@@ -1,5 +1,7 @@
 'use client';
 
+import type { SortField, SortOrder } from './ExplorerContent';
+
 interface Payment {
   id: number;
   digest: string | null;
@@ -23,6 +25,9 @@ interface PaymentTableProps {
   payments: Payment[];
   pagination: Pagination;
   loading: boolean;
+  sortField: SortField;
+  sortOrder: SortOrder;
+  onSort: (field: SortField) => void;
   onPageChange: (page: number) => void;
 }
 
@@ -63,10 +68,18 @@ function formatDate(date: string) {
   });
 }
 
+function SortIcon({ field, active, order }: { field: string; active: boolean; order: SortOrder }) {
+  if (!active) return <span className="text-muted/30 ml-1">↕</span>;
+  return <span className="text-accent ml-1">{order === 'desc' ? '↓' : '↑'}</span>;
+}
+
 export function PaymentTable({
   payments,
   pagination,
   loading,
+  sortField,
+  sortOrder,
+  onSort,
   onPageChange,
 }: PaymentTableProps) {
   return (
@@ -92,11 +105,19 @@ export function PaymentTable({
               <th className="text-left px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider hidden md:table-cell">
                 From
               </th>
-              <th className="text-right px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider">
+              <th
+                className="text-right px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider cursor-pointer hover:text-muted select-none"
+                onClick={() => onSort('amount')}
+              >
                 Amount
+                <SortIcon field="amount" active={sortField === 'amount'} order={sortOrder} />
               </th>
-              <th className="text-right px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider">
+              <th
+                className="text-right px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider cursor-pointer hover:text-muted select-none"
+                onClick={() => onSort('createdAt')}
+              >
                 Time
+                <SortIcon field="createdAt" active={sortField === 'createdAt'} order={sortOrder} />
               </th>
             </tr>
           </thead>

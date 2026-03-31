@@ -32,11 +32,16 @@ interface Pagination {
   pages: number;
 }
 
+export type SortField = 'createdAt' | 'amount';
+export type SortOrder = 'asc' | 'desc';
+
 export function ExplorerContent() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, pages: 0 });
   const [serverFilter, setServerFilter] = useState<string>('');
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +54,7 @@ export function ExplorerContent() {
   const fetchPayments = useCallback(
     async (page: number) => {
       setLoading(true);
-      const params = new URLSearchParams({ page: String(page), limit: '25' });
+      const params = new URLSearchParams({ page: String(page), limit: '25', sort: sortField, order: sortOrder });
       if (serverFilter) params.set('server', serverFilter);
       try {
         const res = await fetch(`/api/explorer?${params}`);
@@ -62,12 +67,23 @@ export function ExplorerContent() {
         setLoading(false);
       }
     },
-    [serverFilter],
+    [serverFilter, sortField, sortOrder],
   );
 
   useEffect(() => {
     fetchPayments(1);
   }, [fetchPayments]);
+
+  const handleSort = useCallback((field: SortField) => {
+    setSortField((prev) => {
+      if (prev === field) {
+        setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
+        return prev;
+      }
+      setSortOrder('desc');
+      return field;
+    });
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -129,6 +145,9 @@ export function ExplorerContent() {
         payments={payments}
         pagination={pagination}
         loading={loading}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         onPageChange={fetchPayments}
       />
     </div>
