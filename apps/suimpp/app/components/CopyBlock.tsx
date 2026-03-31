@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { highlight } from 'sugar-high';
 
 interface CopyBlockProps {
   code: string;
@@ -18,6 +19,8 @@ export function CopyBlock({ code, lang, title }: CopyBlockProps) {
     });
   }, [code]);
 
+  const highlighted = highlight(code);
+
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden group">
       {title && (
@@ -26,8 +29,8 @@ export function CopyBlock({ code, lang, title }: CopyBlockProps) {
         </div>
       )}
       <div className="relative">
-        <pre className="p-4 font-mono text-xs leading-relaxed text-muted overflow-x-auto">
-          <code>{code}</code>
+        <pre className="sh p-4 font-mono text-xs leading-relaxed overflow-x-auto">
+          <code dangerouslySetInnerHTML={{ __html: highlighted }} />
         </pre>
         <button
           onClick={handleCopy}

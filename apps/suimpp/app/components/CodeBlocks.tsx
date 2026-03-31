@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { highlight } from 'sugar-high';
 
 function CodeBlock({
   title,
@@ -22,6 +23,8 @@ function CodeBlock({
     });
   }, [code]);
 
+  const highlighted = highlight(code);
+
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -34,8 +37,8 @@ function CodeBlock({
           {copied ? 'copied' : 'copy'}
         </button>
       </div>
-      <pre className="p-4 font-mono text-xs leading-relaxed text-muted flex-1 overflow-x-auto">
-        <code>{code}</code>
+      <pre className="sh p-4 font-mono text-xs leading-relaxed flex-1 overflow-x-auto">
+        <code dangerouslySetInnerHTML={{ __html: highlighted }} />
       </pre>
       <div className="px-4 py-3 border-t border-border">
         <a
