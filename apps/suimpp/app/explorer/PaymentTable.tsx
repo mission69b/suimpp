@@ -180,7 +180,7 @@ export function PaymentTable({
                       <span className="text-muted/40">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-mono text-accent whitespace-nowrap">
+                  <td className="px-4 py-2.5 text-right font-mono text-text whitespace-nowrap">
                     {formatUSDC(p.amount)}
                   </td>
                   <td

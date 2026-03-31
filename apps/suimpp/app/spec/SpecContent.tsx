@@ -8,7 +8,7 @@ export function SpecContent() {
       <header className="space-y-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-medium">Sui Charge Method</h1>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-accent/30 text-accent">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-border text-muted">
             v1.0
           </span>
         </div>
@@ -328,7 +328,7 @@ const result = await client.signAndExecuteTransaction({ transaction: tx });
             rel={link.href.startsWith('/') ? undefined : 'noopener noreferrer'}
             className="flex items-center gap-2 text-xs text-muted hover:text-text transition-colors"
           >
-            <span className="text-accent">→</span>
+            <span className="text-muted">→</span>
             {link.label}
           </a>
         ))}
@@ -351,7 +351,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 function FlowStep({ num, title, children }: { num: number; title: string; children: React.ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-mono flex items-center justify-center">
+      <span className="shrink-0 w-6 h-6 rounded-full bg-border text-muted text-xs font-mono flex items-center justify-center">
         {num}
       </span>
       <div>
@@ -381,7 +381,7 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
           {rows.map((row, i) => (
             <tr key={i} className="border-b border-border/50 last:border-0">
               {row.map((cell, j) => (
-                <td key={j} className={`px-4 py-2 ${j === 0 ? 'font-mono text-accent' : 'text-muted'}`}>
+                <td key={j} className={`px-4 py-2 ${j === 0 ? 'font-mono text-text' : 'text-muted'}`}>
                   {cell}
                 </td>
               ))}
@@ -413,7 +413,7 @@ function PackageLink({ name, description, href }: { name: string; description: s
       className="flex items-center justify-between rounded-lg border border-border bg-surface p-4 hover:border-accent/30 transition-colors group"
     >
       <div>
-        <span className="font-mono text-sm text-accent">{name}</span>
+        <span className="font-mono text-sm text-text">{name}</span>
         <p className="text-xs text-muted mt-0.5">{description}</p>
       </div>
       <span className="text-muted group-hover:text-accent transition-colors">→</span>

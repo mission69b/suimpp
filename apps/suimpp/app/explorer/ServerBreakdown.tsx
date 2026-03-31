@@ -19,11 +19,11 @@ export function ServerBreakdown({ data }: ServerBreakdownProps) {
   const totalVolume = data.reduce((sum, s) => sum + s.volume, 0) || 1;
 
   const COLORS = [
-    'bg-accent',
-    'bg-accent-hover',
-    'bg-success',
-    'bg-error',
-    'bg-muted',
+    'bg-text/60',
+    'bg-muted/60',
+    'bg-text/30',
+    'bg-muted/30',
+    'bg-border',
   ];
 
   return (
@@ -61,7 +61,7 @@ export function ServerBreakdown({ data }: ServerBreakdownProps) {
               <span className="text-[11px] font-mono text-muted">
                 {s.count} txn{s.count !== 1 ? 's' : ''}
               </span>
-              <span className="text-xs font-mono text-accent">
+              <span className="text-xs font-mono text-text">
                 ${s.volume.toFixed(2)}
               </span>
             </div>

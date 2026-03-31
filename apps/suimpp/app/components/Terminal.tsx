@@ -22,10 +22,10 @@ const LINE_COLORS: Record<string, string> = {
   cmd: 'text-text',
   blank: '',
   error: 'text-error',
-  header: 'text-accent',
-  divider: 'text-muted',
+  header: 'text-muted',
+  divider: 'text-muted/60',
   success: 'text-success',
-  json: 'text-muted',
+  json: 'text-muted/80',
 };
 
 export function Terminal() {

@@ -29,8 +29,11 @@ export function CopyBlock({ code, lang, title }: CopyBlockProps) {
         </div>
       )}
       <div className="relative">
-        <pre className="sh p-4 font-mono text-xs leading-relaxed overflow-x-auto">
-          <code dangerouslySetInnerHTML={{ __html: highlighted }} />
+        <pre className="sh p-4 font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre">
+          <code
+            className="!p-0 !border-0 !bg-transparent !rounded-none !text-inherit"
+            dangerouslySetInnerHTML={{ __html: highlighted }}
+          />
         </pre>
         <button
           onClick={handleCopy}

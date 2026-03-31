@@ -144,7 +144,7 @@ export function ServerList({
                       .map((cat) => (
                         <span
                           key={cat}
-                          className="px-1.5 py-0.5 rounded text-[10px] bg-accent/10 text-accent/80"
+                          className="px-1.5 py-0.5 rounded text-[10px] bg-border text-muted"
                         >
                           {cat}
                         </span>
@@ -152,7 +152,7 @@ export function ServerList({
                   </div>
                 )}
               </div>
-              <span className="text-xs text-accent shrink-0">View →</span>
+              <span className="text-xs text-muted shrink-0">View →</span>
             </div>
 
             <div className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-muted">
@@ -224,7 +224,7 @@ function Sparkline({ data }: { data: number[] }) {
       {data.map((v, i) => (
         <div
           key={i}
-          className="flex-1 rounded-sm bg-accent/40 min-w-[2px]"
+          className="flex-1 rounded-sm bg-muted/30 min-w-[2px]"
           style={{ height: `${Math.max((v / max) * 100, 8)}%` }}
         />
       ))}

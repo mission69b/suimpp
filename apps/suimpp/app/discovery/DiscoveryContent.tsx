@@ -152,7 +152,7 @@ export function DiscoveryContent() {
                   ['responses.200.schema', 'Per operation', 'Output schema for agent parsing'],
                 ].map(([field, loc, purpose]) => (
                   <tr key={field} className="border-b border-border/50 last:border-0">
-                    <td className="px-4 py-2 font-mono text-accent">{field}</td>
+                    <td className="px-4 py-2 font-mono text-text">{field}</td>
                     <td className="px-4 py-2 text-muted">{loc}</td>
                     <td className="px-4 py-2 text-muted">{purpose}</td>
                   </tr>
@@ -192,7 +192,7 @@ export function DiscoveryContent() {
                 ['maxPrice', 'If range', 'Maximum price for range pricing'],
               ].map(([field, req, desc]) => (
                 <tr key={field} className="border-b border-border/50 last:border-0">
-                  <td className="px-4 py-2 font-mono text-accent">{field}</td>
+                  <td className="px-4 py-2 font-mono text-text">{field}</td>
                   <td className="px-4 py-2 text-muted">{req}</td>
                   <td className="px-4 py-2 text-muted">{desc}</td>
                 </tr>
@@ -287,7 +287,7 @@ export function DiscoveryContent() {
         </p>
         <ol className="mt-2 space-y-3">
           <li className="flex gap-3">
-            <span className="shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-mono flex items-center justify-center">1</span>
+            <span className="shrink-0 w-6 h-6 rounded-full bg-border text-muted text-xs font-mono flex items-center justify-center">1</span>
             <div>
               <span className="text-text font-medium text-sm">OpenAPI Discovery</span>
               <div className="mt-1 text-xs text-muted">
@@ -297,7 +297,7 @@ export function DiscoveryContent() {
             </div>
           </li>
           <li className="flex gap-3">
-            <span className="shrink-0 w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-mono flex items-center justify-center">2</span>
+            <span className="shrink-0 w-6 h-6 rounded-full bg-border text-muted text-xs font-mono flex items-center justify-center">2</span>
             <div>
               <span className="text-text font-medium text-sm">Endpoint Probe</span>
               <div className="mt-1 text-xs text-muted">
@@ -356,12 +356,12 @@ export function DiscoveryContent() {
             </thead>
             <tbody>
               <tr className="border-b border-border/50">
-                <td className="px-4 py-2 font-mono text-accent">1</td>
+                <td className="px-4 py-2 font-mono text-text">1</td>
                 <td className="px-4 py-2 text-muted">OpenAPI document</td>
                 <td className="px-4 py-2 font-mono text-muted">/openapi.json</td>
               </tr>
               <tr>
-                <td className="px-4 py-2 font-mono text-accent">2</td>
+                <td className="px-4 py-2 font-mono text-text">2</td>
                 <td className="px-4 py-2 text-muted">402 API response</td>
                 <td className="px-4 py-2 font-mono text-muted">WWW-Authenticate header</td>
               </tr>
@@ -371,7 +371,7 @@ export function DiscoveryContent() {
       </Section>
 
       {/* CTA */}
-      <section className="rounded-lg border border-accent/20 bg-accent/5 p-6 space-y-3">
+      <section className="rounded-lg border border-border bg-surface p-6 space-y-3">
         <h3 className="text-sm font-medium">Ready to register?</h3>
         <p className="text-xs text-muted leading-relaxed">
           Once your server passes validation, register it on suimpp.dev to appear
@@ -408,7 +408,7 @@ export function DiscoveryContent() {
             href={link.href}
             className="flex items-center gap-2 text-xs text-muted hover:text-text transition-colors"
           >
-            <span className="text-accent">→</span>
+            <span className="text-muted">→</span>
             {link.label}
           </a>
         ))}
@@ -431,7 +431,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 text-xs text-muted leading-relaxed [&_code]:text-text [&_code]:bg-surface [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:border [&_code]:border-border [&_code]:text-[11px] [&_code]:font-mono">
-      <span className="text-accent shrink-0 mt-0.5">•</span>
+      <span className="text-muted/60 shrink-0 mt-0.5">•</span>
       <span>{children}</span>
     </div>
   );

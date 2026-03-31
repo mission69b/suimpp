@@ -148,7 +148,7 @@ export function LiveFeed() {
                     )}
                   </div>
 
-                  <span className="font-mono text-xs text-accent text-right whitespace-nowrap">
+                  <span className="font-mono text-xs text-text text-right whitespace-nowrap">
                     {formatUSDC(p.amount)}
                   </span>
 

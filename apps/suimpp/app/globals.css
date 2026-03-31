@@ -7,7 +7,7 @@
   --color-text: #f1f5f9;
   --color-muted: #94a3b8;
   --color-accent: #60a5fa;
-  --color-accent-hover: #818cf8;
+  --color-accent-hover: #93bbfd;
   --color-success: #34d399;
   --color-error: #f87171;
 
@@ -27,15 +27,15 @@ body {
   background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
-/* sugar-high syntax highlighting tokens */
+/* sugar-high — subdued palette, blue-gray family */
 .sh {
   --sh-class: #93c5fd;
-  --sh-identifier: #c4b5fd;
+  --sh-identifier: #cbd5e1;
   --sh-sign: #64748b;
   --sh-property: #e2e8f0;
-  --sh-entity: #60a5fa;
-  --sh-jsxliterals: #60a5fa;
-  --sh-string: #86efac;
-  --sh-keyword: #f0abfc;
+  --sh-entity: #93c5fd;
+  --sh-jsxliterals: #93c5fd;
+  --sh-string: #94a3b8;
+  --sh-keyword: #cbd5e1;
   --sh-comment: #475569;
 }

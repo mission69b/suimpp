@@ -129,7 +129,7 @@ export function RegisterForm() {
         href="/discovery"
         className="flex items-center gap-4 rounded-lg border border-border bg-surface p-4 hover:border-accent/30 transition-colors group"
       >
-        <span className="shrink-0 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent text-lg">
+        <span className="shrink-0 w-10 h-10 rounded-lg bg-border flex items-center justify-center text-text text-lg">
           &#x1D4D3;
         </span>
         <div className="flex-1 min-w-0">
@@ -263,7 +263,7 @@ export function RegisterForm() {
                       <span className="text-muted/50 mr-2">{ep.method}</span>
                       {ep.path}
                     </span>
-                    <span className="text-accent shrink-0 ml-3">
+                    <span className="text-text shrink-0 ml-3">
                       {ep.paymentInfo.price ?? ep.paymentInfo.amount ?? 'dynamic'}
                     </span>
                   </div>

@@ -18,8 +18,8 @@ export function DocsContent() {
       </header>
 
       {/* Quickstart */}
-      <section className="rounded-lg border border-accent/20 bg-accent/5 p-5 space-y-4">
-        <div className="text-[10px] uppercase tracking-wider text-accent">
+      <section className="rounded-lg border border-border bg-surface p-5 space-y-4">
+        <div className="text-[10px] uppercase tracking-wider text-muted">
           Quickstart
         </div>
         <div className="grid md:grid-cols-2 gap-4">
@@ -151,23 +151,23 @@ const data = await response.json();`}
           <Step num={5} title="What happens under the hood">
             <div className="rounded-lg border border-border bg-surface p-4 font-mono text-xs space-y-2 text-muted">
               <div className="flex gap-3">
-                <span className="text-accent shrink-0">1.</span>
+                <span className="text-muted shrink-0">1.</span>
                 <span>Client sends <Code>POST /v1/chat/completions</Code></span>
               </div>
               <div className="flex gap-3">
-                <span className="text-accent shrink-0">2.</span>
+                <span className="text-muted shrink-0">2.</span>
                 <span>Server returns <Code>402</Code> + <Code>WWW-Authenticate: MPP method=&quot;sui&quot;, amount=&quot;0.03&quot;, ...</Code></span>
               </div>
               <div className="flex gap-3">
-                <span className="text-accent shrink-0">3.</span>
+                <span className="text-muted shrink-0">3.</span>
                 <span>Client builds &amp; executes USDC transfer on Sui (~400ms)</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-accent shrink-0">4.</span>
+                <span className="text-muted shrink-0">4.</span>
                 <span>Client retries with <Code>Authorization: MPP digest=&quot;...&quot;</Code></span>
               </div>
               <div className="flex gap-3">
-                <span className="text-accent shrink-0">5.</span>
+                <span className="text-muted shrink-0">5.</span>
                 <span>Server verifies on-chain, delivers response</span>
               </div>
             </div>
@@ -298,19 +298,19 @@ app.post('/api/generate', mpp.charge({ amount: '0.01' })(
             </p>
             <ul className="mt-2 space-y-1.5 text-sm text-muted">
               <li className="flex gap-2">
-                <span className="text-accent">•</span>
+                <span className="text-muted/60">•</span>
                 Queries the Sui RPC for the transaction
               </li>
               <li className="flex gap-2">
-                <span className="text-accent">•</span>
+                <span className="text-muted/60">•</span>
                 Confirms it succeeded on-chain
               </li>
               <li className="flex gap-2">
-                <span className="text-accent">•</span>
+                <span className="text-muted/60">•</span>
                 Verifies payment went to your address
               </li>
               <li className="flex gap-2">
-                <span className="text-accent">•</span>
+                <span className="text-muted/60">•</span>
                 Checks amount {'>='} requested (BigInt precision)
               </li>
             </ul>
@@ -366,7 +366,7 @@ app.post('/api/generate', mpp.charge({ amount: '0.01' })(
             href={link.href}
             className="flex items-center gap-2 text-xs text-muted hover:text-text transition-colors"
           >
-            <span className="text-accent">→</span>
+            <span className="text-muted">→</span>
             {link.label}
           </a>
         ))}
@@ -389,8 +389,8 @@ function TrackButton({
       onClick={onClick}
       className={`px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
         active
-          ? 'bg-accent/10 border border-accent/40 text-accent'
-          : 'border border-border text-muted hover:text-text hover:border-accent/20'
+          ? 'bg-surface border border-text/20 text-text'
+          : 'border border-border text-muted hover:text-text hover:border-border'
       }`}
     >
       {children}
@@ -410,7 +410,7 @@ function Step({
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-medium flex items-center gap-2">
-        <span className="text-accent text-xs font-mono">{num}.</span>
+        <span className="text-muted text-xs font-mono">{num}.</span>
         {title}
       </h3>
       <div className="text-sm text-muted leading-relaxed space-y-3">

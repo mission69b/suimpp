@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Use APIs — suimpp',
   description:
-    'Use MPP APIs with Sui USDC micropayments. No API keys needed — just install, fund, and call.',
+    'Access hundreds of APIs with micropayments and no API keys. Onboard through t2000 or install via CLI.',
 };
 
 export default function AgentPage() {

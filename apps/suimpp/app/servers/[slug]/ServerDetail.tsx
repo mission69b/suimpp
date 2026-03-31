@@ -122,7 +122,7 @@ export function ServerDetail({
             {server.categories.split(', ').filter(Boolean).map((cat) => (
               <span
                 key={cat}
-                className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-accent/10 text-accent border border-accent/20"
+                className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-border text-muted border border-border"
               >
                 {cat}
               </span>
@@ -237,7 +237,7 @@ export function ServerDetail({
                     <td className="px-4 py-2 font-mono text-muted/60 hidden sm:table-cell">
                       {ep.method}
                     </td>
-                    <td className="px-4 py-2 text-right font-mono text-accent whitespace-nowrap">
+                    <td className="px-4 py-2 text-right font-mono text-text whitespace-nowrap">
                       {ep.price ? `$${ep.price}` : 'dynamic'}
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-muted">
@@ -291,7 +291,7 @@ export function ServerDetail({
                     <td className="px-4 py-2 font-mono text-muted truncate max-w-48 hidden sm:table-cell">
                       {p.endpoint || '—'}
                     </td>
-                    <td className="px-4 py-2 text-right font-mono text-accent whitespace-nowrap">
+                    <td className="px-4 py-2 text-right font-mono text-text whitespace-nowrap">
                       {formatUSDC(p.amount)}
                     </td>
                     <td className="px-4 py-2 font-mono">
