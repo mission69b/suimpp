@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const page = Math.max(1, parseInt(params.get('page') ?? '1', 10));

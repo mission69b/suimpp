@@ -9,6 +9,7 @@ interface Payment {
   recipient: string | null;
   amount: string;
   currency: string | null;
+  endpoint: string;
   network: string;
   createdAt: string;
   server: { name: string; url: string };
@@ -103,7 +104,7 @@ export function PaymentTable({
                 Transaction
               </th>
               <th className="text-left px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider hidden md:table-cell">
-                From
+                Endpoint
               </th>
               <th
                 className="text-right px-4 py-2.5 font-medium text-muted/60 text-[10px] uppercase tracking-wider cursor-pointer hover:text-muted select-none"
@@ -165,20 +166,8 @@ export function PaymentTable({
                       <span className="text-muted/40">pending</span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 font-mono hidden md:table-cell">
-                    {p.sender ? (
-                      <a
-                        href={suiscanAddr(p.sender, p.network)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted hover:text-accent transition-colors"
-                        title={p.sender}
-                      >
-                        {truncate(p.sender)}
-                      </a>
-                    ) : (
-                      <span className="text-muted/40">—</span>
-                    )}
+                  <td className="px-4 py-2.5 font-mono text-muted truncate max-w-48 hidden md:table-cell">
+                    {p.endpoint || '—'}
                   </td>
                   <td className="px-4 py-2.5 text-right font-mono text-text whitespace-nowrap">
                     {formatUSDC(p.amount)}

@@ -20,6 +20,7 @@ interface Payment {
   recipient: string | null;
   amount: string;
   currency: string | null;
+  endpoint: string;
   network: string;
   createdAt: string;
   server: { name: string; url: string };

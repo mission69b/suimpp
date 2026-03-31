@@ -7,6 +7,7 @@ interface Payment {
   amount: string;
   digest: string | null;
   sender: string | null;
+  endpoint: string;
   network: string;
   createdAt: string;
   server: { name: string };
@@ -124,9 +125,9 @@ export function LiveFeed() {
                     <span className="text-xs text-text font-medium">
                       {p.server.name}
                     </span>
-                    {p.sender && (
+                    {p.endpoint && (
                       <span className="text-[11px] font-mono text-muted ml-2 hidden lg:inline">
-                        from {truncateAddress(p.sender)}
+                        {p.endpoint}
                       </span>
                     )}
                   </div>
