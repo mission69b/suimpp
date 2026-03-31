@@ -5,7 +5,7 @@ import { ServerList } from './ServerList';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
+export const revalidate = 15;
 
 export const metadata: Metadata = {
   title: 'Servers — suimpp',

@@ -47,7 +47,7 @@ export function Terminal() {
         <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         <span className="ml-2 text-[10px] text-muted font-mono">terminal</span>
       </div>
-      <div className="p-4 font-mono text-xs leading-relaxed h-[280px] overflow-hidden">
+      <div className="p-4 font-mono text-xs leading-relaxed h-[320px] overflow-hidden">
         {LINES.slice(0, visibleLines).map((line, i) => (
           <div key={i} className={LINE_COLORS[line.type]}>
             {line.text || '\u00A0'}

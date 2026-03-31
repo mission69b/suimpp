@@ -7,7 +7,7 @@ import { Stats } from './components/Stats';
 import { Footer } from './components/Footer';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
+export const revalidate = 15;
 
 export default function Home() {
   return (
