@@ -1,8 +1,8 @@
 export function Footer() {
   const links = [
-    { label: '@mppsui/mpp', href: 'https://www.npmjs.com/package/@mppsui/mpp' },
-    { label: 'GitHub', href: 'https://github.com/mission69b/mppsui' },
-    { label: 'npm', href: 'https://www.npmjs.com/org/mppsui' },
+    { label: '@suimpp/mpp', href: 'https://www.npmjs.com/package/@suimpp/mpp' },
+    { label: 'GitHub', href: 'https://github.com/mission69b/suimpp' },
+    { label: 'npm', href: 'https://www.npmjs.com/org/suimpp' },
     { label: 'mpp.dev', href: 'https://mpp.dev' },
     { label: 'mppscan', href: 'https://mppscan.com' },
   ];

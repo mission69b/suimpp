@@ -1,6 +1,6 @@
 {
-  "name": "@mppsui/mpp",
-  "version": "0.2.0",
+  "name": "@suimpp/mpp",
+  "version": "0.3.1",
   "description": "Sui USDC payment method for the Machine Payments Protocol (MPP)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -35,15 +35,16 @@
     "ai",
     "agent",
     "402",
-    "machine-payments"
+    "machine-payments",
+    "suimpp"
   ],
-  "author": "mppsui",
+  "author": "suimpp",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mission69b/mppsui.git",
+    "url": "git+https://github.com/mission69b/suimpp.git",
     "directory": "packages/mpp"
   },
-  "homepage": "https://mppsui.dev",
+  "homepage": "https://suimpp.dev",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

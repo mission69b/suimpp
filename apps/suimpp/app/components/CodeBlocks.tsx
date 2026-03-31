@@ -30,7 +30,7 @@ function CodeBlock({
 }
 
 const CLIENT_CODE = `import { Mppx } from 'mppx/client';
-import { sui } from '@mppsui/mpp/client';
+import { sui } from '@suimpp/mpp/client';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 
 const mpp = Mppx.create({
@@ -43,7 +43,7 @@ const res = await mpp.fetch(
 );`;
 
 const SERVER_CODE = `import { Mppx } from 'mppx/nextjs';
-import { sui } from '@mppsui/mpp/server';
+import { sui } from '@suimpp/mpp/server';
 
 const mpp = Mppx.create({
   realm: 'api.example.com',

@@ -115,12 +115,12 @@ export async function run(): Promise<void> {
 
   if (!target || args.includes('--help') || args.includes('-h')) {
     console.log(`
-${BOLD}@mppsui/discovery${RESET} — Sui MPP server validation
+${BOLD}@suimpp/discovery${RESET} — Sui MPP server validation
 
 ${BOLD}Usage:${RESET}
-  npx @mppsui/discovery check <url>       Full validation (OpenAPI + probe)
-  npx @mppsui/discovery discover <url>    List paid endpoints
-  npx @mppsui/discovery <url>             Alias for check
+  npx @suimpp/discovery check <url>       Full validation (OpenAPI + probe)
+  npx @suimpp/discovery discover <url>    List paid endpoints
+  npx @suimpp/discovery <url>             Alias for check
 
 ${BOLD}Flags:${RESET}
   --json    Machine-readable JSON output

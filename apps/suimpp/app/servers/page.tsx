@@ -88,7 +88,7 @@ export default async function ServersPage() {
               your OpenAPI spec and start tracking payments automatically.
             </p>
             <a
-              href="https://github.com/mission69b/mppsui/issues/new?title=Register+server&template=register-server.md"
+              href="https://github.com/mission69b/suimpp/issues/new?title=Register+server&template=register-server.md"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block text-sm px-4 py-2 rounded-md border border-accent text-accent hover:bg-accent hover:text-bg transition-colors"

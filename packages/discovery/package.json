@@ -1,13 +1,13 @@
 {
-  "name": "@mppsui/discovery",
-  "version": "0.1.0",
+  "name": "@suimpp/discovery",
+  "version": "0.2.0",
   "description": "Sui-specific discovery validation for MPP servers — validate OpenAPI documents and probe 402 payment challenges",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mppsui-discovery": "./bin/discovery.js"
+    "suimpp-discovery": "./bin/discovery.js"
   },
   "exports": {
     ".": {
@@ -30,15 +30,16 @@
     "payment",
     "validation",
     "usdc",
-    "agent"
+    "agent",
+    "suimpp"
   ],
-  "author": "mppsui",
+  "author": "suimpp",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mission69b/mppsui.git",
+    "url": "git+https://github.com/mission69b/suimpp.git",
     "directory": "packages/discovery"
   },
-  "homepage": "https://mppsui.dev",
+  "homepage": "https://suimpp.dev",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

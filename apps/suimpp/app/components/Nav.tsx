@@ -11,7 +11,7 @@ export function Nav() {
           Servers
         </Link>
         <a
-          href="https://github.com/mission69b/mppsui"
+          href="https://github.com/mission69b/suimpp"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-text transition-colors"

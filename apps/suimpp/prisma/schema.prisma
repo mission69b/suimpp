@@ -12,6 +12,7 @@ model Server {
   name       String
   url        String    @unique
   openapiUrl String    @map("openapi_url")
+  recipient  String?
   verified   Boolean   @default(false)
   services   Int       @default(0)
   endpoints  Int       @default(0)
@@ -26,11 +27,14 @@ model Payment {
   id        Int      @id @default(autoincrement())
   serverId  Int      @map("server_id")
   server    Server   @relation(fields: [serverId], references: [id])
-  service   String
-  endpoint  String
-  amount    String
   digest    String?  @unique
   sender    String?
+  recipient String?
+  amount    String
+  currency  String?
+  network   String   @default("mainnet")
+  service   String   @default("")
+  endpoint  String   @default("")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([createdAt(sort: Desc)])

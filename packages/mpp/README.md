@@ -1,24 +1,24 @@
-# @mppsui/mpp
+# @suimpp/mpp
 
 Sui USDC payment method for the [Machine Payments Protocol (MPP)](https://mpp.dev). Accept and make payments on any API — the first MPP implementation on Sui.
 
-[![npm](https://img.shields.io/npm/v/@mppsui/mpp)](https://www.npmjs.com/package/@mppsui/mpp)
+[![npm](https://img.shields.io/npm/v/@suimpp/mpp)](https://www.npmjs.com/package/@suimpp/mpp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-**[Website](https://t2000.ai/mpp)** · **[GitHub](https://github.com/mission69b/t2000)** · **[SDK](https://www.npmjs.com/package/@t2000/sdk)** · **[CLI](https://www.npmjs.com/package/@t2000/cli)**
+**[Website](https://suimpp.dev)** · **[GitHub](https://github.com/mission69b/suimpp)** · **[SDK](https://www.npmjs.com/package/@t2000/sdk)** · **[CLI](https://www.npmjs.com/package/@t2000/cli)**
 
-> **Migrated from `@t2000/mpp-sui`.** If you were using the old package, switch your imports to `@mppsui/mpp`.
+> **Migrated from `@mppsui/mpp`.** If you were using the old package, switch your imports to `@suimpp/mpp`.
 
 ## What is MPP?
 
 The [Machine Payments Protocol](https://mpp.dev) is an open standard by Stripe and Tempo Labs for agent-to-service payments. When a server returns HTTP `402 Payment Required`, the client pays automatically and retries — no API keys, no subscriptions, no human approval.
 
-`@mppsui/mpp` adds **Sui USDC** as a payment method. It works with any MPP-compatible client or server via the `mppx` SDK.
+`@suimpp/mpp` adds **Sui USDC** as a payment method. It works with any MPP-compatible client or server via the `mppx` SDK.
 
 ## Installation
 
 ```bash
-npm install @mppsui/mpp mppx
+npm install @suimpp/mpp mppx
 ```
 
 ## Accept Payments (Server)
@@ -26,7 +26,7 @@ npm install @mppsui/mpp mppx
 Add payments to any API in 5 lines:
 
 ```typescript
-import { sui } from '@mppsui/mpp/server';
+import { sui } from '@suimpp/mpp/server';
 import { Mppx } from 'mppx';
 
 const SUI_USDC = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
@@ -45,7 +45,7 @@ No webhooks. No Stripe dashboard. No KYC. USDC arrives directly in your wallet.
 ## Make Payments (Client)
 
 ```typescript
-import { sui } from '@mppsui/mpp/client';
+import { sui } from '@suimpp/mpp/client';
 import { Mppx } from 'mppx/client';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
@@ -120,7 +120,7 @@ No facilitator. No intermediary. The server verifies the Sui transaction directl
 Creates a Sui payment method for the server.
 
 ```typescript
-import { sui } from '@mppsui/mpp/server';
+import { sui } from '@suimpp/mpp/server';
 
 const method = sui({
   currency: SUI_USDC,         // Sui coin type (e.g. USDC)
@@ -128,6 +128,7 @@ const method = sui({
   decimals: 6,                // Optional: currency decimals (default: 6)
   rpcUrl: '...',              // Optional: custom gRPC endpoint
   network: 'mainnet',         // Optional: 'mainnet' | 'testnet' | 'devnet'
+  registryUrl: 'https://suimpp.dev/api/report', // Optional: report payments to suimpp.dev
 });
 ```
 
@@ -143,7 +144,7 @@ Verification checks:
 Creates a Sui payment method for the client.
 
 ```typescript
-import { sui } from '@mppsui/mpp/client';
+import { sui } from '@suimpp/mpp/client';
 
 const method = sui({
   client: grpcClient,            // Any Sui client (SuiGrpcClient, etc.)
@@ -171,7 +172,7 @@ The client uses the [`coinWithBalance`](https://sdk.mystenlabs.com/sui/transacti
 The Sui coin type for Circle-issued USDC on mainnet.
 
 ```typescript
-import { SUI_USDC_TYPE } from '@mppsui/mpp';
+import { SUI_USDC_TYPE } from '@suimpp/mpp';
 // '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC'
 ```
 
@@ -200,10 +201,10 @@ MPP is chain-agnostic. We chose Sui because agent payments need:
 ## Testing
 
 ```bash
-pnpm --filter @mppsui/mpp test    # 13 tests
-pnpm --filter @mppsui/mpp typecheck
+pnpm --filter @suimpp/mpp test    # 13 tests
+pnpm --filter @suimpp/mpp typecheck
 ```
 
 ## License
 
-MIT — see [LICENSE](https://github.com/mission69b/t2000/blob/main/LICENSE)
+MIT — see [LICENSE](https://github.com/mission69b/suimpp/blob/main/LICENSE)

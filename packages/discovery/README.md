@@ -1,21 +1,21 @@
-# @mppsui/discovery
+# @suimpp/discovery
 
 Sui-specific discovery validation for [MPP](https://mpp.dev) servers. Validate OpenAPI documents, check `x-payment-info` extensions, and probe 402 payment challenges.
 
-[![npm](https://img.shields.io/npm/v/@mppsui/discovery)](https://www.npmjs.com/package/@mppsui/discovery)
+[![npm](https://img.shields.io/npm/v/@suimpp/discovery)](https://www.npmjs.com/package/@suimpp/discovery)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ## CLI
 
 ```bash
 # Full validation — OpenAPI + live 402 probe
-npx @mppsui/discovery check mpp.t2000.ai
+npx @suimpp/discovery check mpp.t2000.ai
 
 # List paid endpoints only
-npx @mppsui/discovery discover mpp.t2000.ai
+npx @suimpp/discovery discover mpp.t2000.ai
 
 # Machine-readable JSON
-npx @mppsui/discovery check mpp.t2000.ai --json
+npx @suimpp/discovery check mpp.t2000.ai --json
 ```
 
 ### Example output
@@ -45,7 +45,7 @@ https://mpp.t2000.ai/openapi.json
 ## Programmatic Usage
 
 ```typescript
-import { check, discover, probe } from '@mppsui/discovery';
+import { check, discover, probe } from '@suimpp/discovery';
 
 // Full validation
 const result = await check('mpp.t2000.ai');
@@ -107,8 +107,8 @@ console.log(probeResult.recipient);     // 0x...
 ## Testing
 
 ```bash
-pnpm --filter @mppsui/discovery test       # 19 tests
-pnpm --filter @mppsui/discovery typecheck
+pnpm --filter @suimpp/discovery test       # 19 tests
+pnpm --filter @suimpp/discovery typecheck
 ```
 
 ## License

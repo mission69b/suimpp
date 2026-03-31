@@ -1,5 +1,5 @@
 {
-  "name": "mppsui",
+  "name": "suimpp",
   "private": true,
   "scripts": {
     "build": "turbo build",

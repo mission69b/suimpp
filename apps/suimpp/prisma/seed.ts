@@ -8,6 +8,7 @@ async function main() {
     update: {
       services: 40,
       endpoints: 88,
+      recipient: '0x76d70cf9d3ab7f714a35adf8766a2cb25929cae92ab4de54ff4dea0482b05012',
     },
     create: {
       name: 't2000 Gateway',
@@ -16,6 +17,7 @@ async function main() {
       verified: true,
       services: 40,
       endpoints: 88,
+      recipient: '0x76d70cf9d3ab7f714a35adf8766a2cb25929cae92ab4de54ff4dea0482b05012',
     },
   });
 

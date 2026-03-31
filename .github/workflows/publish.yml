@@ -39,13 +39,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - name: Publish @mppsui/mpp
-        run: pnpm --filter @mppsui/mpp publish --no-git-checks --access public
+      - name: Publish @suimpp/mpp
+        run: pnpm --filter @suimpp/mpp publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @mppsui/discovery
-        run: pnpm --filter @mppsui/discovery publish --no-git-checks --access public
+      - name: Publish @suimpp/discovery
+        run: pnpm --filter @suimpp/discovery publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

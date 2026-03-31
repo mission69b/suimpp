@@ -17,15 +17,17 @@ No API keys. No subscriptions. Agents pay per request via on-chain micropayments
 
 ## Packages
 
-- \`@mppsui/mpp\` — Sui USDC payment method for the MPP protocol
-  npm: https://www.npmjs.com/package/@mppsui/mpp
+- \`@suimpp/mpp\` — Sui USDC payment method for the MPP protocol
+  npm: https://www.npmjs.com/package/@suimpp/mpp
+- \`@suimpp/discovery\` — Discovery validation CLI for MPP servers
+  npm: https://www.npmjs.com/package/@suimpp/discovery
 - \`mppx\` — MPP client/server SDK (protocol-level)
   npm: https://www.npmjs.com/package/mppx
 
 ## Links
 
 - Protocol spec: https://mpp.dev
-- GitHub: https://github.com/mission69b/mppsui
+- GitHub: https://github.com/mission69b/suimpp
 - First server: https://mpp.t2000.ai (40 services, 88 endpoints)
 - Server catalog: https://suimpp.dev/servers
 - MPPscan: https://mppscan.com

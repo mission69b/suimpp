@@ -14,6 +14,10 @@ export interface SuiServerOptions {
   decimals?: number;
   rpcUrl?: string;
   network?: 'mainnet' | 'testnet' | 'devnet';
+  /** URL to report verified payments to (e.g. https://suimpp.dev/api/report). Fire-and-forget POST after successful verification. */
+  registryUrl?: string;
+  /** Public URL of the server (e.g. https://mpp.t2000.ai). Sent with payment reports for server identification. */
+  serverUrl?: string;
 }
 
 export function sui(options: SuiServerOptions) {
@@ -67,12 +71,32 @@ export function sui(options: SuiServerOptions) {
         );
       }
 
-      return Receipt.from({
+      const receipt = Receipt.from({
         method: 'sui',
         reference: credential.payload.digest,
         status: 'success',
         timestamp: new Date().toISOString(),
       });
+
+      if (options.registryUrl) {
+        fetch(options.registryUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            digest,
+            sender: resolved.balanceChanges.find(
+              (bc) => bc.coinType === options.currency && BigInt(bc.amount) < 0n,
+            )?.address,
+            recipient: options.recipient,
+            amount: credential.challenge.request.amount,
+            currency: options.currency,
+            network,
+            serverUrl: options.serverUrl,
+          }),
+        }).catch(() => {});
+      }
+
+      return receipt;
     },
   });
 }
