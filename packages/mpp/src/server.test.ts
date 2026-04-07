@@ -157,11 +157,16 @@ describe('server verify', () => {
 
 describe('digest replay protection', () => {
   let suiFn: typeof import('./server.js').sui;
+  const originalEnv = process.env.NODE_ENV;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     const mod = await import('./server.js');
     suiFn = mod.sui;
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalEnv;
   });
 
   it('accepts a valid digest on first use', async () => {
