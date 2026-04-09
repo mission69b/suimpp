@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Instrument_Serif, Inter } from 'next/font/google';
 import './globals.css';
 
 const geistSans = Geist({
@@ -9,6 +9,18 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: '--font-mono',
+  subsets: ['latin'],
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: '--font-instrument-serif',
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+});
+
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
 });
 
@@ -39,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${inter.variable}`}>
       <body>{children}</body>
     </html>
   );

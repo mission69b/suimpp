@@ -338,7 +338,7 @@ function Check({ pass, warn, label }: { pass: boolean; warn?: boolean; label: st
     : '✗';
   const color = pass
     ? warn
-      ? 'text-yellow-400'
+      ? 'text-warning'
       : 'text-success'
     : 'text-error';
 

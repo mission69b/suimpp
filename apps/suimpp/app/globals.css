@@ -1,18 +1,21 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #0a0e1a;
-  --color-surface: #111827;
-  --color-border: #1e293b;
-  --color-text: #f1f5f9;
-  --color-muted: #94a3b8;
-  --color-accent: #60a5fa;
-  --color-accent-hover: #93bbfd;
-  --color-success: #34d399;
-  --color-error: #f87171;
+  --color-bg: #FFFFFF;
+  --color-surface: #F7F7F7;
+  --color-border: #E5E5E5;
+  --color-text: #191919;
+  --color-muted: #707070;
+  --color-accent: #191919;
+  --color-accent-hover: #404040;
+  --color-success: #3CC14E;
+  --color-warning: #B45309;
+  --color-error: #F0201D;
 
   --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-heading: var(--font-inter), 'Inter', system-ui, sans-serif;
 }
 
 body {
@@ -24,18 +27,18 @@ body {
 }
 
 ::selection {
-  background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 
-/* sugar-high — subdued palette, blue-gray family */
+/* sugar-high — dark palette for light backgrounds */
 .sh {
-  --sh-class: #93c5fd;
-  --sh-identifier: #cbd5e1;
-  --sh-sign: #64748b;
-  --sh-property: #e2e8f0;
-  --sh-entity: #93c5fd;
-  --sh-jsxliterals: #93c5fd;
-  --sh-string: #94a3b8;
-  --sh-keyword: #cbd5e1;
-  --sh-comment: #475569;
+  --sh-class: #1e40af;
+  --sh-identifier: #374151;
+  --sh-sign: #6b7280;
+  --sh-property: #1f2937;
+  --sh-entity: #1e40af;
+  --sh-jsxliterals: #1e40af;
+  --sh-string: #707070;
+  --sh-keyword: #374151;
+  --sh-comment: #9ca3af;
 }
