@@ -66,13 +66,14 @@ const res = await mpp.fetch(
 );`;
 
 const SERVER_CODE = `import { Mppx } from 'mppx/nextjs';
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
 
 const mpp = Mppx.create({
   realm: 'api.example.com',
   methods: [sui({
     currency: SUI_USDC_TYPE,
     recipient: '0x...',
+    store: new InMemoryDigestStore(), // Use Redis/DB in production.
   })],
 });
 

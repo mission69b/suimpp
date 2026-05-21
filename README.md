@@ -26,13 +26,14 @@ npm install @suimpp/mpp mppx
 ```
 
 ```typescript
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
 import { Mppx } from 'mppx';
 
 const mppx = Mppx.create({
   methods: [sui({
     currency: '0xdba...::usdc::USDC',
     recipient: '0xYOUR_ADDRESS',
+    store: new InMemoryDigestStore(), // Use Redis/DB in production.
   })],
 });
 
@@ -87,7 +88,8 @@ Agent                              Server                           Sui
   │   └─ TX confirmed ←──────────────────────────────────────────────│
   │      digest: "Hp4oHHs..."        │                              │
   │                                   │                              │
-  │── Retry + credential {digest} ──>│                              │
+  │── Retry + credential ───────────>│                              │
+  │   {digest, signature}            │                              │
   │                                   │── getTransaction(digest) ──>│
   │                                   │   verify: success, amount,   │
   │                                   │   recipient matches          │
@@ -171,12 +173,12 @@ Payments are reported by the gateway (application layer), not by the library dir
                                         └─────────────────────┘
 ```
 
-**Why this pattern?** The `verify()` callback has on-chain data (sender from balance changes) but no HTTP context (which endpoint was called). The gateway's charge wrapper has HTTP context but no on-chain data. The `onPayment` callback bridges the two layers using the digest as the join key.
+**Why this pattern?** The `verify()` callback has on-chain data (transaction sender, digest, amount, recipient) but no HTTP context (which endpoint was called). The gateway's charge wrapper has HTTP context but no on-chain data. The `onPayment` callback bridges the two layers using the digest as the join key.
 
 **Implementation:**
 
 ```typescript
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
 import type { PaymentReport } from '@suimpp/mpp/server';
 
 // 1. Library emits on-chain data via callback
@@ -186,6 +188,7 @@ const mppx = Mppx.create({
   methods: [sui({
     currency: SUI_USDC_TYPE,
     recipient: TREASURY_ADDRESS,
+    store: new InMemoryDigestStore(), // Use Redis/DB in production.
     network: 'mainnet',
     onPayment: (report) => {
       pendingReports.set(report.digest, report);

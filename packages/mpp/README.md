@@ -26,13 +26,19 @@ npm install @suimpp/mpp mppx
 Add payments to any API in 5 lines:
 
 ```typescript
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
 import { Mppx } from 'mppx';
 
 const SUI_USDC = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
 
 const mppx = Mppx.create({
-  methods: [sui({ currency: SUI_USDC, recipient: '0xYOUR_ADDRESS' })],
+  methods: [
+    sui({
+      currency: SUI_USDC,
+      recipient: '0xYOUR_ADDRESS',
+      store: new InMemoryDigestStore(), // Use Redis/DB in production.
+    }),
+  ],
 });
 
 export const GET = mppx.charge({ amount: '0.01' })(
@@ -107,7 +113,7 @@ Agent                    API Server
   │                          │
   │── GET /resource ────────>│
   │   + payment credential   │── verify TX on-chain via gRPC
-  │   (Sui tx digest)        │
+  │   (digest + signature)   │
   │<── 200 OK + data ────────│
 ```
 
@@ -120,11 +126,12 @@ No facilitator. No intermediary. The server verifies the Sui transaction directl
 Creates a Sui payment method for the server.
 
 ```typescript
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
 
 const method = sui({
   currency: SUI_USDC,         // Sui coin type (e.g. USDC)
   recipient: '0xYOUR_ADDR',   // Where payments are sent
+  store: new InMemoryDigestStore(), // Required. Use Redis/DB in production.
   decimals: 6,                // Optional: currency decimals (default: 6)
   rpcUrl: '...',              // Optional: custom gRPC endpoint
   network: 'mainnet',         // Optional: 'mainnet' | 'testnet' | 'devnet'
@@ -136,6 +143,8 @@ Verification checks:
 - Transaction succeeded on-chain
 - Payment sent to correct recipient (address-normalized comparison)
 - Amount >= requested (BigInt precision, no floating-point)
+- Payment proof signature matches the transaction sender
+- Digest has not been used before according to the required `store`
 
 ## Client API
 

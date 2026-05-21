@@ -3,12 +3,12 @@ import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
 import { Method, Receipt } from 'mppx';
-import { InMemoryDigestStore } from './in-memory-digest-store.js';
 import { suiCharge } from './method.js';
 import { createSuiPaymentProofBytes } from './proof.js';
 import { parseAmountToRaw, withRetry } from './utils.js';
 
 export { suiCharge } from './method.js';
+export { InMemoryDigestStore } from './in-memory-digest-store.js';
 export { SUI_USDC_TYPE } from './constants.js';
 
 export interface DigestStore {
@@ -32,46 +32,33 @@ export interface SuiServerOptions {
   decimals?: number;
   rpcUrl?: string;
   network?: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
-  /** Digest store for replay protection. Required in production. Falls back to in-memory in dev. */
-  store?: DigestStore;
+  /** Digest store for replay protection. Use a shared durable store in production. */
+  store: DigestStore;
   /** Called after successful on-chain verification with payment data. */
   onPayment?: (report: PaymentReport) => void;
 }
 
-let _defaultStore: DigestStore | undefined;
-
 function resolveStore(options: SuiServerOptions): DigestStore {
-  if (options.store) return options.store;
-
-  if (
-    typeof process !== 'undefined' &&
-    process.env?.NODE_ENV === 'production'
-  ) {
+  if (!options.store) {
     throw new Error(
-      '[suimpp] DigestStore is required in production. ' +
+      '[suimpp] DigestStore is required. ' +
         'Provide a Redis or DB-backed store via SuiServerOptions.store. ' +
-        'The default in-memory store is single-instance only and unsafe for multi-instance deployments.',
+        'Use InMemoryDigestStore explicitly only for local development or tests.',
     );
   }
-
-  if (!_defaultStore) {
-    _defaultStore = new InMemoryDigestStore();
-    console.warn(
-      '[suimpp] No DigestStore provided. Using in-memory store. ' +
-        'This is NOT safe for production or multi-instance deployments.',
-    );
+  if (!options.store.has || typeof options.store.has !== 'function') {
+    throw new Error('[suimpp] DigestStore must implement has method');
   }
-  return _defaultStore;
+  if (!options.store.set || typeof options.store.set !== 'function') {
+    throw new Error('[suimpp] DigestStore must implement set method');
+  }
+  return options.store;
 }
 
 export function sui(options: SuiServerOptions) {
   const network = options.network ?? 'mainnet';
   const decimals = options.decimals ?? 6;
-  const baseUrl =
-    options.rpcUrl ??
-    (network === 'localnet'
-      ? 'http://127.0.0.1:9000'
-      : getJsonRpcFullnodeUrl(network));
+  const baseUrl = options.rpcUrl ?? getJsonRpcFullnodeUrl(network);
   const client = new SuiGrpcClient({
     baseUrl,
     network,

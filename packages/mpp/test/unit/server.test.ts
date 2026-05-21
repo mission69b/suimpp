@@ -1,5 +1,5 @@
 import type { Challenge, Credential, Method } from 'mppx';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryDigestStore } from '../../src/in-memory-digest-store.js';
 import type { suiCharge } from '../../src/method.js';
 import {
@@ -113,7 +113,6 @@ vi.mock('@mysten/sui/verify', () => ({
 
 describe('server verify', () => {
   let suiFn: typeof createSuiServer;
-  const originalEnv = process.env.NODE_ENV;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -122,10 +121,6 @@ describe('server verify', () => {
     });
     const mod = await import('../../src/server.js');
     suiFn = mod.sui;
-  });
-
-  afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
   });
 
   it('accepts valid payment with correct amount', async () => {
@@ -276,7 +271,6 @@ describe('server verify', () => {
 
 describe('digest replay protection', () => {
   let suiFn: typeof createSuiServer;
-  const originalEnv = process.env.NODE_ENV;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -285,10 +279,6 @@ describe('digest replay protection', () => {
     });
     const mod = await import('../../src/server.js');
     suiFn = mod.sui;
-  });
-
-  afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
   });
 
   it('accepts a valid digest on first use', async () => {
@@ -376,11 +366,11 @@ describe('digest replay protection', () => {
     expect(result.status).toBe('success');
   });
 
-  it('throws on missing store in production', () => {
-    process.env.NODE_ENV = 'production';
+  it('throws on missing store', () => {
     expect(() =>
+      // @ts-expect-error Runtime guard protects JavaScript callers too.
       suiFn({ currency: SUI_USDC_TYPE, recipient: RECIPIENT }),
-    ).toThrow('DigestStore is required in production');
+    ).toThrow('DigestStore is required');
   });
 
   it('marks digest before returning receipt (store.set failure = no free call)', async () => {

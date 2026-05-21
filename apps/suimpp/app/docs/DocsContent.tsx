@@ -47,12 +47,13 @@ const res = await mpp.fetch('https://api.example.com/v1/generate', {
             </span>
             <CopyBlock
               code={`import { Mppx } from 'mppx/nextjs';
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
 
 const mpp = Mppx.create({
   methods: [sui({
     currency: SUI_USDC,
     recipient: '0xYOUR_ADDRESS',
+    store: new InMemoryDigestStore(), // Use Redis/DB in production.
   })],
 });
 
@@ -226,13 +227,14 @@ const data = await response.json();`}
             </p>
             <CopyBlock
               code={`import { Mppx } from 'mppx/nextjs'; // or 'mppx/server'
-import { sui, SUI_USDC_TYPE } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui, SUI_USDC_TYPE } from '@suimpp/mpp/server';
 
 const mpp = Mppx.create({
   methods: [
     sui({
       currency: SUI_USDC_TYPE,
       recipient: '0xYOUR_SUI_ADDRESS',
+      store: new InMemoryDigestStore(), // Use Redis/DB in production.
       registryUrl: 'https://suimpp.dev/api/report',
       serverUrl: 'https://your-server.com',
     }),
@@ -292,11 +294,17 @@ const mpp = Mppx.create({
             <CopyBlock
               title="Express example"
               code={`import { Mppx } from 'mppx/server';
-import { sui, SUI_USDC_TYPE } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, sui, SUI_USDC_TYPE } from '@suimpp/mpp/server';
 import express from 'express';
 
 const mpp = Mppx.create({
-  methods: [sui({ currency: SUI_USDC_TYPE, recipient: '0x...' })],
+  methods: [
+    sui({
+      currency: SUI_USDC_TYPE,
+      recipient: '0x...',
+      store: new InMemoryDigestStore(), // Use Redis/DB in production.
+    }),
+  ],
 });
 
 const app = express();
