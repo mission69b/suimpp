@@ -6,21 +6,33 @@ import type {
   sui as createSuiClient,
 } from '../../src/client.js';
 
+const { mockBalance, mockBuild, mockMoveCall, mockPureAddress } = vi.hoisted(
+  () => ({
+    mockBalance: vi.fn(() => 'balance_result'),
+    mockBuild: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+    mockMoveCall: vi.fn(),
+    mockPureAddress: vi.fn(() => 'recipient_address_result'),
+  }),
+);
+
 vi.mock('@mysten/sui/transactions', () => {
-  const coinWithBalance = vi.fn(() => 'coin_with_balance_result');
   const Transaction = vi.fn().mockImplementation(() => ({
     setSender: vi.fn(),
-    transferObjects: vi.fn(),
-    build: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+    balance: mockBalance,
+    pure: {
+      address: mockPureAddress,
+    },
+    moveCall: mockMoveCall,
+    build: mockBuild,
   }));
-  return { Transaction, coinWithBalance };
+  return { Transaction };
 });
 
-const mockExecuteTransaction = vi.fn();
+const mockSignAndExecuteTransaction = vi.fn();
 
 const mockClient = {
   core: {
-    executeTransaction: mockExecuteTransaction,
+    signAndExecuteTransaction: mockSignAndExecuteTransaction,
   },
 };
 
@@ -47,6 +59,7 @@ type SuiChargeChallenge = Challenge.Challenge<
   'charge',
   'sui'
 >;
+const USDC = { type: '0x::usdc::USDC', decimals: 6 };
 
 function buildChallenge(amount = '0.01'): SuiChargeChallenge {
   return {
@@ -71,14 +84,15 @@ describe('client createCredential', () => {
     suiFn = mod.sui;
   });
 
-  it('builds transaction with coinWithBalance and executes it', async () => {
-    mockExecuteTransaction.mockResolvedValue({
+  it('builds transaction with send_funds and executes it', async () => {
+    mockSignAndExecuteTransaction.mockResolvedValue({
       Transaction: { digest: '0xtxdigest' },
     });
 
     const clientMethod = suiFn({
       client: typedMockClient,
       signer: typedMockSigner,
+      currency: USDC,
     });
 
     const challenge = buildChallenge();
@@ -89,13 +103,18 @@ describe('client createCredential', () => {
       signature: string;
     }>(authorization);
 
-    expect(mockSigner.signTransaction).toHaveBeenCalled();
     expect(mockSigner.signPersonalMessage).toHaveBeenCalledWith(
       expect.any(Uint8Array),
     );
-    expect(mockExecuteTransaction).toHaveBeenCalledWith({
+    expect(mockMoveCall).toHaveBeenCalledWith({
+      target: '0x2::balance::send_funds',
+      arguments: ['balance_result', 'recipient_address_result'],
+      typeArguments: ['0x::usdc::USDC'],
+    });
+    expect(mockBuild).toHaveBeenCalledWith({ client: typedMockClient });
+    expect(mockSignAndExecuteTransaction).toHaveBeenCalledWith({
       transaction: expect.any(Uint8Array),
-      signatures: ['mock_sig'],
+      signer: typedMockSigner,
       include: { effects: true },
     });
     expect(credential.payload).toEqual({
@@ -105,13 +124,14 @@ describe('client createCredential', () => {
   });
 
   it('throws when transaction execution fails', async () => {
-    mockExecuteTransaction.mockResolvedValue({
+    mockSignAndExecuteTransaction.mockResolvedValue({
       FailedTransaction: { status: { error: 'out of gas' } },
     });
 
     const clientMethod = suiFn({
       client: typedMockClient,
       signer: typedMockSigner,
+      currency: USDC,
     });
 
     const challenge = buildChallenge();
@@ -119,6 +139,50 @@ describe('client createCredential', () => {
     await expect(clientMethod.createCredential({ challenge })).rejects.toThrow(
       'Payment transaction failed',
     );
+  });
+
+  it('uses decimals from configured Currency', async () => {
+    mockSignAndExecuteTransaction.mockResolvedValue({
+      Transaction: { digest: '0xtxdigest' },
+    });
+
+    const clientMethod = suiFn({
+      client: typedMockClient,
+      signer: typedMockSigner,
+      currency: { type: '0x::usdc::USDC', decimals: 2 },
+    });
+
+    await clientMethod.createCredential({
+      challenge: buildChallenge('1.23'),
+    });
+
+    expect(mockBalance).toHaveBeenCalledWith({
+      balance: 123n,
+      type: '0x::usdc::USDC',
+    });
+  });
+
+  it('requires configured currency metadata', async () => {
+    mockSignAndExecuteTransaction.mockResolvedValue({
+      Transaction: { digest: '0xtxdigest' },
+    });
+
+    expect(() =>
+      // @ts-expect-error Runtime guard protects JavaScript callers too.
+      suiFn({ client: typedMockClient, signer: typedMockSigner }),
+    ).toThrow('Currency is required');
+  });
+
+  it('rejects an unsupported configured currency', async () => {
+    const clientMethod = suiFn({
+      client: typedMockClient,
+      signer: typedMockSigner,
+      currency: { type: '0x::eurc::EURC', decimals: 6 },
+    });
+
+    await expect(
+      clientMethod.createCredential({ challenge: buildChallenge() }),
+    ).rejects.toThrow('Unsupported currency: 0x::usdc::USDC');
   });
 
   it('uses custom execute when provided', async () => {
@@ -129,6 +193,7 @@ describe('client createCredential', () => {
     const clientMethod = suiFn({
       client: typedMockClient,
       signer: typedMockSigner,
+      currency: USDC,
       execute: customExecute,
     });
 
@@ -144,7 +209,7 @@ describe('client createCredential', () => {
     expect(mockSigner.signPersonalMessage).toHaveBeenCalledWith(
       expect.any(Uint8Array),
     );
-    expect(mockExecuteTransaction).not.toHaveBeenCalled();
+    expect(mockSignAndExecuteTransaction).not.toHaveBeenCalled();
     expect(credential.payload).toMatchObject({
       digest: '0xcustom',
       signature: 'proof_sig',

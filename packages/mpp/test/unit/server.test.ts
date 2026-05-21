@@ -5,11 +5,13 @@ import type { suiCharge } from '../../src/method.js';
 import {
   type DigestStore,
   SUI_USDC_TYPE,
+  USDC,
   type sui as createSuiServer,
 } from '../../src/server.js';
 
 const RECIPIENT = '0xrecipient_address';
 const SENDER = '0xsender_address';
+const ALT_CURRENCY = '0x::eurc::EURC';
 
 type SuiServerMethod = Method.Server<typeof suiCharge>;
 type SuiChargeRequest = {
@@ -61,6 +63,7 @@ function buildCredential(
   digest = '0xdigest123',
   amount = '0.01',
   signature = 'proof_sig',
+  currency = SUI_USDC_TYPE,
 ): SuiCredential {
   return {
     payload: { digest, signature },
@@ -71,7 +74,7 @@ function buildCredential(
       realm: 'test',
       request: {
         amount,
-        currency: SUI_USDC_TYPE,
+        currency,
         recipient: RECIPIENT,
       },
     },
@@ -127,7 +130,7 @@ describe('server verify', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -142,7 +145,7 @@ describe('server verify', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx({ success: false }));
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -158,7 +161,7 @@ describe('server verify', () => {
     );
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -172,12 +175,74 @@ describe('server verify', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx({ amount: '5000' }));
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
 
     await expect(verifyPayment(serverMethod)).rejects.toThrow('Transferred');
+  });
+
+  it('accepts a configured non-default currency', async () => {
+    const onPayment = vi.fn();
+    mockGetTransaction.mockResolvedValue(
+      buildMockTx({ coinType: ALT_CURRENCY, amount: '123' }),
+    );
+
+    const serverMethod = suiFn({
+      currency: { type: ALT_CURRENCY, decimals: 2 },
+      recipient: RECIPIENT,
+      store: new InMemoryDigestStore(),
+      onPayment,
+    });
+
+    const credential = buildCredential(
+      '0xdigest123',
+      '1.23',
+      'proof_sig',
+      ALT_CURRENCY,
+    );
+    const result = await verifyPayment(serverMethod, credential);
+
+    expect(result.status).toBe('success');
+    expect(onPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: ALT_CURRENCY, amount: '1.23' }),
+    );
+  });
+
+  it('rejects an unconfigured challenge currency', async () => {
+    const serverMethod = suiFn({
+      currency: USDC,
+      recipient: RECIPIENT,
+      store: new InMemoryDigestStore(),
+    });
+
+    await expect(
+      verifyPayment(
+        serverMethod,
+        buildCredential('0xdigest123', '0.01', 'proof_sig', ALT_CURRENCY),
+      ),
+    ).rejects.toThrow(`Unsupported currency: ${ALT_CURRENCY}`);
+    expect(mockGetTransaction).not.toHaveBeenCalled();
+  });
+
+  it('uses configured currency decimals for amount checks', async () => {
+    mockGetTransaction.mockResolvedValue(
+      buildMockTx({ coinType: ALT_CURRENCY, amount: '122' }),
+    );
+
+    const serverMethod = suiFn({
+      currency: { type: ALT_CURRENCY, decimals: 2 },
+      recipient: RECIPIENT,
+      store: new InMemoryDigestStore(),
+    });
+
+    await expect(
+      verifyPayment(
+        serverMethod,
+        buildCredential('0xdigest123', '1.23', 'proof_sig', ALT_CURRENCY),
+      ),
+    ).rejects.toThrow('Transferred 122 < requested 123');
   });
 
   it('rejects when no balance changes', async () => {
@@ -190,7 +255,7 @@ describe('server verify', () => {
     });
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -211,7 +276,7 @@ describe('server verify', () => {
       set: vi.fn(),
     } satisfies DigestStore;
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });
@@ -233,7 +298,7 @@ describe('server verify', () => {
       set: vi.fn(),
     } satisfies DigestStore;
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });
@@ -258,7 +323,7 @@ describe('server verify', () => {
     });
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -286,7 +351,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });
@@ -302,7 +367,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });
@@ -318,7 +383,7 @@ describe('digest replay protection', () => {
     const store = new InMemoryDigestStore();
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });
@@ -353,7 +418,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });
@@ -369,7 +434,7 @@ describe('digest replay protection', () => {
   it('throws on missing store', () => {
     expect(() =>
       // @ts-expect-error Runtime guard protects JavaScript callers too.
-      suiFn({ currency: SUI_USDC_TYPE, recipient: RECIPIENT }),
+      suiFn({ currency: USDC, recipient: RECIPIENT }),
     ).toThrow('DigestStore is required');
   });
 
@@ -381,7 +446,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: SUI_USDC_TYPE,
+      currency: USDC,
       recipient: RECIPIENT,
       store,
     });

@@ -53,11 +53,11 @@ function CodeBlock({
 }
 
 const CLIENT_CODE = `import { Mppx } from 'mppx/client';
-import { sui } from '@suimpp/mpp/client';
+import { USDC, sui } from '@suimpp/mpp/client';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 
 const mpp = Mppx.create({
-  methods: [sui({ client, signer })],
+  methods: [sui({ client, signer, currency: USDC })],
 });
 
 const res = await mpp.fetch(
@@ -66,12 +66,12 @@ const res = await mpp.fetch(
 );`;
 
 const SERVER_CODE = `import { Mppx } from 'mppx/nextjs';
-import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, USDC, sui } from '@suimpp/mpp/server';
 
 const mpp = Mppx.create({
   realm: 'api.example.com',
   methods: [sui({
-    currency: SUI_USDC_TYPE,
+    currency: USDC,
     recipient: '0x...',
     store: new InMemoryDigestStore(), // Use Redis/DB in production.
   })],

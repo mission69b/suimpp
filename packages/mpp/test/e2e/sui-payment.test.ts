@@ -8,6 +8,7 @@ import { suiCharge } from '../../src/method.js';
 import { createSuiPaymentProofBytes } from '../../src/proof.js';
 import {
   type PaymentReport,
+  SUI_USDC_TYPE,
   sui as createSuiServer,
 } from '../../src/server.js';
 import { fundAddress, getClient, getFullnodeUrl } from './setup.js';
@@ -55,9 +56,8 @@ describe('Sui localnet e2e payment', () => {
 
   function buildServerMethod(onPayment?: (report: PaymentReport) => void) {
     return createSuiServer({
-      currency: SUI_TYPE_ARG,
+      currency: { type: SUI_TYPE_ARG, decimals: SUI_DECIMALS },
       recipient,
-      decimals: SUI_DECIMALS,
       rpcUrl: getFullnodeUrl(),
       network: 'localnet',
       store: new InMemoryDigestStore(),
@@ -69,7 +69,7 @@ describe('Sui localnet e2e payment', () => {
     const clientMethod = createSuiClient({
       client: localnetClient,
       signer: payerKeypair,
-      decimals: SUI_DECIMALS,
+      currency: { type: SUI_TYPE_ARG, decimals: SUI_DECIMALS },
     });
     const authorization = await clientMethod.createCredential({ challenge });
     const credential = Credential.deserialize<{ digest: string }>(
@@ -142,5 +142,24 @@ describe('Sui localnet e2e payment', () => {
         request: challenge.request,
       }),
     ).rejects.toThrow('Payment proof signer does not match transaction sender');
+  });
+
+  it('rejects a payment made with the wrong currency', async () => {
+    const challenge = buildChallenge('sui-localnet-e2e-wrong-currency');
+    const credential = await createCredential(challenge);
+    const serverMethod = createSuiServer({
+      currency: { type: SUI_USDC_TYPE, decimals: 6 },
+      recipient,
+      rpcUrl: getFullnodeUrl(),
+      network: 'localnet',
+      store: new InMemoryDigestStore(),
+    });
+
+    await expect(
+      serverMethod.verify({
+        credential,
+        request: challenge.request,
+      }),
+    ).rejects.toThrow(`Unsupported currency: ${SUI_TYPE_ARG}`);
   });
 });

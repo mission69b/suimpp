@@ -3,13 +3,22 @@ import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
 import { Method, Receipt } from 'mppx';
+import type { Currency } from './constants.js';
 import { suiCharge } from './method.js';
 import { createSuiPaymentProofBytes } from './proof.js';
 import { parseAmountToRaw, withRetry } from './utils.js';
 
 export { suiCharge } from './method.js';
 export { InMemoryDigestStore } from './in-memory-digest-store.js';
-export { SUI_USDC_TYPE } from './constants.js';
+export {
+  SUI_DOLLAR,
+  SUI_DOLLAR_TYPE,
+  SUI_USDC_TESTNET_TYPE,
+  SUI_USDC_TYPE,
+  USDC,
+  USDC_TESTNET,
+} from './constants.js';
+export type { Currency } from './constants.js';
 
 export interface DigestStore {
   has(digest: string): Promise<boolean>;
@@ -26,10 +35,8 @@ export interface PaymentReport {
 }
 
 export interface SuiServerOptions {
-  currency: string;
+  currency: Currency;
   recipient: string;
-  /** Number of decimal places for the currency (default: 6, e.g. USDC). */
-  decimals?: number;
   rpcUrl?: string;
   network?: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
   /** Digest store for replay protection. Use a shared durable store in production. */
@@ -56,8 +63,11 @@ function resolveStore(options: SuiServerOptions): DigestStore {
 }
 
 export function sui(options: SuiServerOptions) {
+  if (!options.currency) {
+    throw new Error('[suimpp] Currency is required');
+  }
+
   const network = options.network ?? 'mainnet';
-  const decimals = options.decimals ?? 6;
   const baseUrl = options.rpcUrl ?? getJsonRpcFullnodeUrl(network);
   const client = new SuiGrpcClient({
     baseUrl,
@@ -69,12 +79,17 @@ export function sui(options: SuiServerOptions) {
 
   return Method.toServer(suiCharge, {
     defaults: {
-      currency: options.currency,
+      currency: options.currency.type,
       recipient: options.recipient,
     },
 
     async verify({ credential }) {
       const digest = credential.payload.digest;
+      if (credential.challenge.request.currency !== options.currency.type) {
+        throw new Error(
+          `Unsupported currency: ${credential.challenge.request.currency}`,
+        );
+      }
 
       const alreadyUsed = await digestStore.has(digest);
       if (alreadyUsed) {
@@ -101,7 +116,7 @@ export function sui(options: SuiServerOptions) {
 
       const payment = resolved.balanceChanges.find(
         (bc) =>
-          bc.coinType === options.currency &&
+          bc.coinType === options.currency.type &&
           normalizeSuiAddress(bc.address) === normalizedRecipient &&
           BigInt(bc.amount) > 0n,
       );
@@ -113,7 +128,7 @@ export function sui(options: SuiServerOptions) {
       const transferredRaw = BigInt(payment.amount);
       const requestedRaw = parseAmountToRaw(
         credential.challenge.request.amount,
-        decimals,
+        options.currency.decimals,
       );
       if (transferredRaw < requestedRaw) {
         throw new Error(
@@ -157,7 +172,7 @@ export function sui(options: SuiServerOptions) {
         sender,
         recipient: options.recipient,
         amount: credential.challenge.request.amount,
-        currency: options.currency,
+        currency: options.currency.type,
         network,
       };
 

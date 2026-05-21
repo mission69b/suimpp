@@ -26,15 +26,13 @@ npm install @suimpp/mpp mppx
 Add payments to any API in 5 lines:
 
 ```typescript
-import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, USDC, sui } from '@suimpp/mpp/server';
 import { Mppx } from 'mppx';
-
-const SUI_USDC = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
 
 const mppx = Mppx.create({
   methods: [
     sui({
-      currency: SUI_USDC,
+      currency: USDC,
       recipient: '0xYOUR_ADDRESS',
       store: new InMemoryDigestStore(), // Use Redis/DB in production.
     }),
@@ -51,7 +49,7 @@ No webhooks. No Stripe dashboard. No KYC. USDC arrives directly in your wallet.
 ## Make Payments (Client)
 
 ```typescript
-import { sui } from '@suimpp/mpp/client';
+import { USDC, sui } from '@suimpp/mpp/client';
 import { Mppx } from 'mppx/client';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
@@ -63,7 +61,7 @@ const client = new SuiGrpcClient({
 const signer = Ed25519Keypair.deriveKeypair('your mnemonic');
 
 const mppx = Mppx.create({
-  methods: [sui({ client, signer })],
+  methods: [sui({ client, signer, currency: USDC })],
 });
 
 const response = await mppx.fetch('https://api.example.com/resource');
@@ -126,13 +124,12 @@ No facilitator. No intermediary. The server verifies the Sui transaction directl
 Creates a Sui payment method for the server.
 
 ```typescript
-import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, USDC, sui } from '@suimpp/mpp/server';
 
 const method = sui({
-  currency: SUI_USDC,         // Sui coin type (e.g. USDC)
+  currency: USDC,             // Sui coin type + decimals
   recipient: '0xYOUR_ADDR',   // Where payments are sent
   store: new InMemoryDigestStore(), // Required. Use Redis/DB in production.
-  decimals: 6,                // Optional: currency decimals (default: 6)
   rpcUrl: '...',              // Optional: custom gRPC endpoint
   network: 'mainnet',         // Optional: 'mainnet' | 'testnet' | 'devnet'
   registryUrl: 'https://suimpp.dev/api/report', // Optional: report payments to suimpp.dev
@@ -153,12 +150,12 @@ Verification checks:
 Creates a Sui payment method for the client.
 
 ```typescript
-import { sui } from '@suimpp/mpp/client';
+import { USDC, sui } from '@suimpp/mpp/client';
 
 const method = sui({
   client: grpcClient,            // Any Sui client (SuiGrpcClient, etc.)
   signer: ed25519Keypair,        // Signer from @mysten/sui/cryptography
-  decimals: 6,                   // Optional: currency decimals (default: 6)
+  currency: USDC,                // Coin type + decimals
   execute: async (tx) => {       // Optional: custom execution (gas sponsor, etc.)
     return myGasManager.execute(tx);
   },
@@ -169,20 +166,23 @@ const method = sui({
 |--------|------|----------|-------------|
 | `client` | `ClientWithCoreApi` | Yes | Any Sui client implementing the core API |
 | `signer` | `Signer` | Yes | Any `Signer` from `@mysten/sui/cryptography` — `Ed25519Keypair` works |
-| `decimals` | `number` | No | Decimal places for the currency (default: 6) |
+| `currency` | `Currency` | Yes | Single-currency metadata including coin type and decimals |
 | `execute` | `(tx: Transaction) => Promise<{ digest: string }>` | No | Override transaction execution (e.g. gas sponsor/manager) |
 
-The client uses the [`coinWithBalance`](https://sdk.mystenlabs.com/sui/transaction-building/intents) intent to automatically resolve, merge, and split coins for the exact payment amount, then signs and broadcasts the transaction (or delegates to `execute` if provided).
+The client builds a `0x2::coin::send_funds` transaction for the exact payment amount, then signs and broadcasts it (or delegates to `execute` if provided).
 
 ## Constants
 
-### `SUI_USDC_TYPE`
+### Known currencies
 
-The Sui coin type for Circle-issued USDC on mainnet.
+The package exports common `Currency` presets and their raw coin type strings.
 
 ```typescript
-import { SUI_USDC_TYPE } from '@suimpp/mpp';
-// '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC'
+import { SUI_DOLLAR, USDC, USDC_TESTNET } from '@suimpp/mpp';
+
+USDC;         // { type: SUI_USDC_TYPE, decimals: 6 }
+USDC_TESTNET; // { type: SUI_USDC_TESTNET_TYPE, decimals: 6 }
+SUI_DOLLAR;   // { type: SUI_DOLLAR_TYPE, decimals: 6 }
 ```
 
 ## Utilities
@@ -210,7 +210,7 @@ MPP is chain-agnostic. We chose Sui because agent payments need:
 ## Testing
 
 ```bash
-pnpm --filter @suimpp/mpp test    # 13 tests
+pnpm --filter @suimpp/mpp test    # 29 tests
 pnpm --filter @suimpp/mpp typecheck
 ```
 

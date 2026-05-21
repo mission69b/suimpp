@@ -9,11 +9,12 @@ declare module 'vitest' {
   }
 }
 
+const SUI_TOOLS_BASE_TAG = 'd0b6a5d9663a5e3e4cfe4a04fdc92130f8ed502c';
 const SUI_TOOLS_TAG =
   process.env.SUI_TOOLS_TAG ||
   (process.arch === 'arm64'
-    ? '951cae315d8b252131836a331bcc16b89eb340d6-arm64'
-    : '951cae315d8b252131836a331bcc16b89eb340d6');
+    ? `${SUI_TOOLS_BASE_TAG}-arm64`
+    : SUI_TOOLS_BASE_TAG);
 
 export default async function setup(project: TestProject) {
   const containers: StartedTestContainer[] = [];
