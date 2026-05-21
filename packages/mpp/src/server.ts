@@ -1,9 +1,11 @@
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
 import { Method, Receipt } from 'mppx';
 import { InMemoryDigestStore } from './in-memory-digest-store.js';
 import { suiCharge } from './method.js';
+import { createSuiPaymentProofBytes } from './proof.js';
 import { parseAmountToRaw, withRetry } from './utils.js';
 
 export { suiCharge } from './method.js';
@@ -97,7 +99,7 @@ export function sui(options: SuiServerOptions) {
       const tx = await withRetry(() =>
         client.core.getTransaction({
           digest,
-          include: { balanceChanges: true },
+          include: { balanceChanges: true, transaction: true },
         }),
       ).catch(() => {
         throw new Error(
@@ -132,6 +134,28 @@ export function sui(options: SuiServerOptions) {
         );
       }
 
+      const publicKey = await verifyPersonalMessageSignature(
+        createSuiPaymentProofBytes({
+          challenge: credential.challenge,
+          digest,
+        }),
+        credential.payload.signature,
+      ).catch(() => {
+        throw new Error('Invalid payment proof signature');
+      });
+      const sender = resolved.transaction?.sender;
+      if (!sender) {
+        throw new Error('Transaction sender not found');
+      }
+      if (
+        normalizeSuiAddress(publicKey.toSuiAddress()) !==
+        normalizeSuiAddress(sender)
+      ) {
+        throw new Error(
+          'Payment proof signer does not match transaction sender',
+        );
+      }
+
       await digestStore.set(digest);
 
       const receipt = Receipt.from({
@@ -143,9 +167,7 @@ export function sui(options: SuiServerOptions) {
 
       const report: PaymentReport = {
         digest,
-        sender: resolved.balanceChanges.find(
-          (bc) => bc.coinType === options.currency && BigInt(bc.amount) < 0n,
-        )?.address,
+        sender,
         recipient: options.recipient,
         amount: credential.challenge.request.amount,
         currency: options.currency,

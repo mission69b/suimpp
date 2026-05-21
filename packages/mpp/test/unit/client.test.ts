@@ -1,4 +1,5 @@
 import type { Challenge } from 'mppx';
+import { Credential } from 'mppx';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SuiChargeOptions,
@@ -25,6 +26,9 @@ const mockClient = {
 
 const mockSigner = {
   toSuiAddress: () => '0xagent_address',
+  signPersonalMessage: vi
+    .fn()
+    .mockResolvedValue({ bytes: 'proof_bytes', signature: 'proof_sig' }),
   signTransaction: vi
     .fn()
     .mockResolvedValue({ bytes: 'mock_bytes', signature: 'mock_sig' }),
@@ -79,17 +83,24 @@ describe('client createCredential', () => {
 
     const challenge = buildChallenge();
 
-    try {
-      await clientMethod.createCredential({ challenge });
-    } catch {
-      // Credential.serialize may not be available in test; this verifies TX building.
-    }
+    const authorization = await clientMethod.createCredential({ challenge });
+    const credential = Credential.deserialize<{
+      digest: string;
+      signature: string;
+    }>(authorization);
 
     expect(mockSigner.signTransaction).toHaveBeenCalled();
+    expect(mockSigner.signPersonalMessage).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+    );
     expect(mockExecuteTransaction).toHaveBeenCalledWith({
       transaction: expect.any(Uint8Array),
       signatures: ['mock_sig'],
       include: { effects: true },
+    });
+    expect(credential.payload).toEqual({
+      digest: '0xtxdigest',
+      signature: 'proof_sig',
     });
   });
 
@@ -123,13 +134,20 @@ describe('client createCredential', () => {
 
     const challenge = buildChallenge('1.00');
 
-    try {
-      await clientMethod.createCredential({ challenge });
-    } catch {
-      // Credential.serialize may not be available in test.
-    }
+    const authorization = await clientMethod.createCredential({ challenge });
+    const credential = Credential.deserialize<{
+      digest: string;
+      signature: string;
+    }>(authorization);
 
     expect(customExecute).toHaveBeenCalled();
+    expect(mockSigner.signPersonalMessage).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+    );
     expect(mockExecuteTransaction).not.toHaveBeenCalled();
+    expect(credential.payload).toMatchObject({
+      digest: '0xcustom',
+      signature: 'proof_sig',
+    });
   });
 });

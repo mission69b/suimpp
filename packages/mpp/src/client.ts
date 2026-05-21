@@ -3,6 +3,7 @@ import type { Signer } from '@mysten/sui/cryptography';
 import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
 import { Credential, Method } from 'mppx';
 import { suiCharge } from './method.js';
+import { createSuiPaymentProofBytes } from './proof.js';
 import { parseAmountToRaw } from './utils.js';
 
 export { suiCharge } from './method.js';
@@ -20,7 +21,6 @@ export interface SuiChargeOptions {
 type TransactionResult = { digest: string };
 
 export function sui(options: SuiChargeOptions) {
-  const address = options.signer.toSuiAddress();
   const decimals = options.decimals ?? 6;
 
   return Method.toClient(suiCharge, {
@@ -29,7 +29,7 @@ export function sui(options: SuiChargeOptions) {
       const amountRaw = parseAmountToRaw(amount, decimals);
 
       const tx = new Transaction();
-      tx.setSender(address);
+      tx.setSender(options.signer.toSuiAddress());
 
       const payment = coinWithBalance({ balance: amountRaw, type: currency });
       tx.transferObjects([payment], recipient);
@@ -62,9 +62,19 @@ export function sui(options: SuiChargeOptions) {
         throw new Error(`Payment transaction failed: ${msg}`);
       }
 
+      const proof = await options.signer.signPersonalMessage(
+        createSuiPaymentProofBytes({
+          challenge,
+          digest: result.digest,
+        }),
+      );
+
       return Credential.serialize({
         challenge,
-        payload: { digest: result.digest },
+        payload: {
+          digest: result.digest,
+          signature: proof.signature,
+        },
       });
     },
   });

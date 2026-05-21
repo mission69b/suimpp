@@ -7,6 +7,7 @@ export const suiCharge = Method.from({
     credential: {
       payload: z.object({
         digest: z.string(),
+        signature: z.string(),
       }),
     },
     request: z.object({

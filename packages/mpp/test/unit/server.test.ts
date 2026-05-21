@@ -23,7 +23,7 @@ type SuiChargeChallenge = Challenge.Challenge<
   'sui'
 >;
 type SuiCredential = Credential.Credential<
-  { digest: string },
+  { digest: string; signature: string },
   SuiChargeChallenge
 >;
 
@@ -43,6 +43,9 @@ function buildMockTx({
   const txData = {
     digest: '0xdigest123',
     status: { success },
+    transaction: {
+      sender: senderAddr,
+    },
     balanceChanges: [
       { coinType, address: recipientAddr, amount },
       { coinType, address: senderAddr, amount: `-${amount}` },
@@ -57,9 +60,10 @@ function buildMockTx({
 function buildCredential(
   digest = '0xdigest123',
   amount = '0.01',
+  signature = 'proof_sig',
 ): SuiCredential {
   return {
-    payload: { digest },
+    payload: { digest, signature },
     challenge: {
       id: 'test-challenge',
       intent: 'charge',
@@ -84,7 +88,12 @@ function verifyPayment(
   });
 }
 
-const mockGetTransaction = vi.fn();
+const { mockGetTransaction, mockVerifyPersonalMessageSignature } = vi.hoisted(
+  () => ({
+    mockGetTransaction: vi.fn(),
+    mockVerifyPersonalMessageSignature: vi.fn(),
+  }),
+);
 
 vi.mock('@mysten/sui/grpc', () => ({
   SuiGrpcClient: vi.fn().mockImplementation(() => ({
@@ -98,12 +107,19 @@ vi.mock('@mysten/sui/utils', () => ({
   normalizeSuiAddress: vi.fn((addr: string) => addr.toLowerCase()),
 }));
 
+vi.mock('@mysten/sui/verify', () => ({
+  verifyPersonalMessageSignature: mockVerifyPersonalMessageSignature,
+}));
+
 describe('server verify', () => {
   let suiFn: typeof createSuiServer;
   const originalEnv = process.env.NODE_ENV;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockVerifyPersonalMessageSignature.mockResolvedValue({
+      toSuiAddress: () => SENDER,
+    });
     const mod = await import('../../src/server.js');
     suiFn = mod.sui;
   });
@@ -188,6 +204,74 @@ describe('server verify', () => {
       'Payment not found',
     );
   });
+
+  it('rejects when proof signature is invalid', async () => {
+    mockGetTransaction.mockResolvedValue(buildMockTx());
+    mockVerifyPersonalMessageSignature.mockRejectedValue(
+      new Error('bad signature'),
+    );
+
+    const store = {
+      has: vi.fn().mockResolvedValue(false),
+      set: vi.fn(),
+    } satisfies DigestStore;
+    const serverMethod = suiFn({
+      currency: SUI_USDC_TYPE,
+      recipient: RECIPIENT,
+      store,
+    });
+
+    await expect(verifyPayment(serverMethod)).rejects.toThrow(
+      'Invalid payment proof signature',
+    );
+    expect(store.set).not.toHaveBeenCalled();
+  });
+
+  it('rejects when proof signer is not the transaction sender', async () => {
+    mockGetTransaction.mockResolvedValue(buildMockTx());
+    mockVerifyPersonalMessageSignature.mockResolvedValue({
+      toSuiAddress: () => '0xthief',
+    });
+
+    const store = {
+      has: vi.fn().mockResolvedValue(false),
+      set: vi.fn(),
+    } satisfies DigestStore;
+    const serverMethod = suiFn({
+      currency: SUI_USDC_TYPE,
+      recipient: RECIPIENT,
+      store,
+    });
+
+    await expect(verifyPayment(serverMethod)).rejects.toThrow(
+      'Payment proof signer does not match transaction sender',
+    );
+    expect(store.set).not.toHaveBeenCalled();
+  });
+
+  it('rejects when transaction sender is missing', async () => {
+    mockGetTransaction.mockResolvedValue({
+      Transaction: {
+        digest: '0xdigest123',
+        status: { success: true },
+        transaction: undefined,
+        balanceChanges: [
+          { coinType: SUI_USDC_TYPE, address: RECIPIENT, amount: '10000' },
+          { coinType: SUI_USDC_TYPE, address: SENDER, amount: '-10000' },
+        ],
+      },
+    });
+
+    const serverMethod = suiFn({
+      currency: SUI_USDC_TYPE,
+      recipient: RECIPIENT,
+      store: new InMemoryDigestStore(),
+    });
+
+    await expect(verifyPayment(serverMethod)).rejects.toThrow(
+      'Transaction sender not found',
+    );
+  });
 });
 
 describe('digest replay protection', () => {
@@ -196,6 +280,9 @@ describe('digest replay protection', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockVerifyPersonalMessageSignature.mockResolvedValue({
+      toSuiAddress: () => SENDER,
+    });
     const mod = await import('../../src/server.js');
     suiFn = mod.sui;
   });
@@ -253,6 +340,9 @@ describe('digest replay protection', () => {
       Transaction: {
         digest: '0xdigest456',
         status: { success: true },
+        transaction: {
+          sender: SENDER,
+        },
         balanceChanges: [
           { coinType: SUI_USDC_TYPE, address: RECIPIENT, amount: '10000' },
           { coinType: SUI_USDC_TYPE, address: SENDER, amount: '-10000' },
