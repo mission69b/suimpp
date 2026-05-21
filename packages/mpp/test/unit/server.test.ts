@@ -2,10 +2,12 @@ import type { Challenge, Credential, Method } from 'mppx';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InMemoryDigestStore } from '../../src/in-memory-digest-store.js';
 import type { suiCharge } from '../../src/method.js';
-import type { DigestStore, sui as createSuiServer } from '../../src/server.js';
+import {
+  type DigestStore,
+  SUI_USDC_TYPE,
+  type sui as createSuiServer,
+} from '../../src/server.js';
 
-const USDC_TYPE =
-  '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
 const RECIPIENT = '0xrecipient_address';
 const SENDER = '0xsender_address';
 
@@ -27,7 +29,7 @@ type SuiCredential = Credential.Credential<
 
 function buildMockTx({
   success = true,
-  coinType = USDC_TYPE,
+  coinType = SUI_USDC_TYPE,
   recipientAddr = RECIPIENT,
   amount = '10000',
   senderAddr = SENDER,
