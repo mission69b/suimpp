@@ -1,9 +1,10 @@
-import { Method, Receipt } from 'mppx';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { Method, Receipt } from 'mppx';
+import { InMemoryDigestStore } from './in-memory-digest-store.js';
 import { suiCharge } from './method.js';
 import { parseAmountToRaw, withRetry } from './utils.js';
-import { InMemoryDigestStore } from './in-memory-digest-store.js';
 
 export { suiCharge } from './method.js';
 export { SUI_USDC_TYPE } from './constants.js';
@@ -28,7 +29,7 @@ export interface SuiServerOptions {
   /** Number of decimal places for the currency (default: 6, e.g. USDC). */
   decimals?: number;
   rpcUrl?: string;
-  network?: 'mainnet' | 'testnet' | 'devnet';
+  network?: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
   /** Digest store for replay protection. Required in production. Falls back to in-memory in dev. */
   store?: DigestStore;
   /** Called after successful on-chain verification with payment data. */
@@ -40,11 +41,14 @@ let _defaultStore: DigestStore | undefined;
 function resolveStore(options: SuiServerOptions): DigestStore {
   if (options.store) return options.store;
 
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+  if (
+    typeof process !== 'undefined' &&
+    process.env?.NODE_ENV === 'production'
+  ) {
     throw new Error(
       '[suimpp] DigestStore is required in production. ' +
-      'Provide a Redis or DB-backed store via SuiServerOptions.store. ' +
-      'The default in-memory store is single-instance only and unsafe for multi-instance deployments.',
+        'Provide a Redis or DB-backed store via SuiServerOptions.store. ' +
+        'The default in-memory store is single-instance only and unsafe for multi-instance deployments.',
     );
   }
 
@@ -52,7 +56,7 @@ function resolveStore(options: SuiServerOptions): DigestStore {
     _defaultStore = new InMemoryDigestStore();
     console.warn(
       '[suimpp] No DigestStore provided. Using in-memory store. ' +
-      'This is NOT safe for production or multi-instance deployments.',
+        'This is NOT safe for production or multi-instance deployments.',
     );
   }
   return _defaultStore;
@@ -61,8 +65,13 @@ function resolveStore(options: SuiServerOptions): DigestStore {
 export function sui(options: SuiServerOptions) {
   const network = options.network ?? 'mainnet';
   const decimals = options.decimals ?? 6;
+  const baseUrl =
+    options.rpcUrl ??
+    (network === 'localnet'
+      ? 'http://127.0.0.1:9000'
+      : getJsonRpcFullnodeUrl(network));
   const client = new SuiGrpcClient({
-    baseUrl: options.rpcUrl ?? `https://fullnode.${network}.sui.io:443`,
+    baseUrl,
     network,
   });
 
@@ -85,10 +94,15 @@ export function sui(options: SuiServerOptions) {
         );
       }
 
-      const tx = await withRetry(
-        () => client.core.getTransaction({ digest, include: { balanceChanges: true } }),
+      const tx = await withRetry(() =>
+        client.core.getTransaction({
+          digest,
+          include: { balanceChanges: true },
+        }),
       ).catch(() => {
-        throw new Error(`Could not find the referenced transaction [${digest}]`);
+        throw new Error(
+          `Could not find the referenced transaction [${digest}]`,
+        );
       });
 
       const resolved = tx.Transaction ?? tx.FailedTransaction;
@@ -104,13 +118,14 @@ export function sui(options: SuiServerOptions) {
       );
 
       if (!payment) {
-        throw new Error(
-          'Payment not found in transaction balance changes',
-        );
+        throw new Error('Payment not found in transaction balance changes');
       }
 
       const transferredRaw = BigInt(payment.amount);
-      const requestedRaw = parseAmountToRaw(credential.challenge.request.amount, decimals);
+      const requestedRaw = parseAmountToRaw(
+        credential.challenge.request.amount,
+        decimals,
+      );
       if (transferredRaw < requestedRaw) {
         throw new Error(
           `Transferred ${transferredRaw} < requested ${requestedRaw} (raw units)`,
@@ -138,7 +153,9 @@ export function sui(options: SuiServerOptions) {
       };
 
       if (options.onPayment) {
-        try { options.onPayment(report); } catch {}
+        try {
+          options.onPayment(report);
+        } catch {}
       }
 
       return receipt;

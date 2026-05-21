@@ -14,7 +14,10 @@ export function parseAmountToRaw(amount: string, decimals: number): bigint {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  { attempts = 5, baseDelayMs = 1000 }: { attempts?: number; baseDelayMs?: number } = {},
+  {
+    attempts = 5,
+    baseDelayMs = 1000,
+  }: { attempts?: number; baseDelayMs?: number } = {},
 ): Promise<T> {
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {

@@ -1,7 +1,7 @@
-import { Method, Credential } from 'mppx';
 import type { ClientWithCoreApi } from '@mysten/sui/client';
 import type { Signer } from '@mysten/sui/cryptography';
-import { coinWithBalance, Transaction } from '@mysten/sui/transactions';
+import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
+import { Credential, Method } from 'mppx';
 import { suiCharge } from './method.js';
 import { parseAmountToRaw } from './utils.js';
 
@@ -16,6 +16,8 @@ export interface SuiChargeOptions {
   /** Override transaction execution (e.g. to route through a gas manager). */
   execute?: (tx: Transaction) => Promise<{ digest: string }>;
 }
+
+type TransactionResult = { digest: string };
 
 export function sui(options: SuiChargeOptions) {
   const address = options.signer.toSuiAddress();
@@ -32,7 +34,7 @@ export function sui(options: SuiChargeOptions) {
       const payment = coinWithBalance({ balance: amountRaw, type: currency });
       tx.transferObjects([payment], recipient);
 
-      let result;
+      let result: TransactionResult;
       try {
         if (options.execute) {
           result = await options.execute(tx);
@@ -45,9 +47,15 @@ export function sui(options: SuiChargeOptions) {
             include: { effects: true },
           });
           if (execResult.FailedTransaction) {
-            throw new Error(execResult.FailedTransaction.status.error?.message ?? 'Transaction failed');
+            throw new Error(
+              execResult.FailedTransaction.status.error?.message ??
+                'Transaction failed',
+            );
           }
-          result = execResult.Transaction!;
+          if (!execResult.Transaction) {
+            throw new Error('Transaction failed');
+          }
+          result = execResult.Transaction;
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

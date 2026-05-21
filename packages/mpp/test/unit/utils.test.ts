@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { parseAmountToRaw } from './utils.js';
+import { describe, expect, it } from 'vitest';
+import { parseAmountToRaw } from '../../src/utils.js';
 
 describe('parseAmountToRaw', () => {
   it('converts whole number', () => {
