@@ -67,7 +67,7 @@ function buildCredential(
       realm: 'test',
       request: {
         amount,
-        currency: USDC_TYPE,
+        currency: SUI_USDC_TYPE,
         recipient: RECIPIENT,
       },
     },
@@ -116,7 +116,7 @@ describe('server verify', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -131,7 +131,7 @@ describe('server verify', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx({ success: false }));
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -147,7 +147,7 @@ describe('server verify', () => {
     );
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -161,7 +161,7 @@ describe('server verify', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx({ amount: '5000' }));
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -179,7 +179,7 @@ describe('server verify', () => {
     });
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store: new InMemoryDigestStore(),
     });
@@ -209,7 +209,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store,
     });
@@ -225,7 +225,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store,
     });
@@ -241,7 +241,7 @@ describe('digest replay protection', () => {
     const store = new InMemoryDigestStore();
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store,
     });
@@ -254,8 +254,8 @@ describe('digest replay protection', () => {
         digest: '0xdigest456',
         status: { success: true },
         balanceChanges: [
-          { coinType: USDC_TYPE, address: RECIPIENT, amount: '10000' },
-          { coinType: USDC_TYPE, address: SENDER, amount: '-10000' },
+          { coinType: SUI_USDC_TYPE, address: RECIPIENT, amount: '10000' },
+          { coinType: SUI_USDC_TYPE, address: SENDER, amount: '-10000' },
         ],
       },
     });
@@ -273,7 +273,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store,
     });
@@ -288,9 +288,9 @@ describe('digest replay protection', () => {
 
   it('throws on missing store in production', () => {
     process.env.NODE_ENV = 'production';
-    expect(() => suiFn({ currency: USDC_TYPE, recipient: RECIPIENT })).toThrow(
-      'DigestStore is required in production',
-    );
+    expect(() =>
+      suiFn({ currency: SUI_USDC_TYPE, recipient: RECIPIENT }),
+    ).toThrow('DigestStore is required in production');
   });
 
   it('marks digest before returning receipt (store.set failure = no free call)', async () => {
@@ -301,7 +301,7 @@ describe('digest replay protection', () => {
     mockGetTransaction.mockResolvedValue(buildMockTx());
 
     const serverMethod = suiFn({
-      currency: USDC_TYPE,
+      currency: SUI_USDC_TYPE,
       recipient: RECIPIENT,
       store,
     });
