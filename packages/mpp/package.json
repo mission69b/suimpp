@@ -23,10 +23,7 @@
       "require": "./dist/server.cjs"
     }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "keywords": [
     "mpp",
     "sui",
@@ -49,19 +46,24 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mysten/sui": "^2",
+    "@mysten/sui": "^2.17.0",
     "mppx": "^0.4.9",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
     "@types/node": "^20",
-    "eslint": "^9",
+    "testcontainers": "^12.0.0",
     "tsup": "^8",
     "typescript": "^5",
     "vitest": "^3"

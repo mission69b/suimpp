@@ -26,13 +26,14 @@ npm install @suimpp/mpp mppx
 ```
 
 ```typescript
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, USDC, sui } from '@suimpp/mpp/server';
 import { Mppx } from 'mppx';
 
 const mppx = Mppx.create({
   methods: [sui({
-    currency: '0xdba...::usdc::USDC',
+    currency: USDC,
     recipient: '0xYOUR_ADDRESS',
+    store: new InMemoryDigestStore(), // Use Redis/DB in production.
   })],
 });
 
@@ -44,15 +45,18 @@ export const GET = mppx.charge({ amount: '0.01' })(
 ### Make Payments (Client)
 
 ```typescript
-import { sui } from '@suimpp/mpp/client';
+import { USDC, sui } from '@suimpp/mpp/client';
 import { Mppx } from 'mppx/client';
 
 const mppx = Mppx.create({
-  methods: [sui({ client, signer })],
+  methods: [sui({ client, signer, currency: USDC })],
 });
 
 const response = await mppx.fetch('https://api.example.com/resource');
 ```
+
+`@suimpp/mpp` exports `USDC`, `USDC_TESTNET`, and `SUI_DOLLAR`
+currency presets. The SDK handles gasless tier behavior automatically.
 
 ### Validate a Server
 
@@ -87,7 +91,8 @@ Agent                              Server                           Sui
   │   └─ TX confirmed ←──────────────────────────────────────────────│
   │      digest: "Hp4oHHs..."        │                              │
   │                                   │                              │
-  │── Retry + credential {digest} ──>│                              │
+  │── Retry + credential ───────────>│                              │
+  │   {digest, signature}            │                              │
   │                                   │── getTransaction(digest) ──>│
   │                                   │   verify: success, amount,   │
   │                                   │   recipient matches          │
@@ -171,12 +176,12 @@ Payments are reported by the gateway (application layer), not by the library dir
                                         └─────────────────────┘
 ```
 
-**Why this pattern?** The `verify()` callback has on-chain data (sender from balance changes) but no HTTP context (which endpoint was called). The gateway's charge wrapper has HTTP context but no on-chain data. The `onPayment` callback bridges the two layers using the digest as the join key.
+**Why this pattern?** The `verify()` callback has on-chain data (transaction sender, digest, amount, recipient) but no HTTP context (which endpoint was called). The gateway's charge wrapper has HTTP context but no on-chain data. The `onPayment` callback bridges the two layers using the digest as the join key.
 
 **Implementation:**
 
 ```typescript
-import { sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, USDC, sui } from '@suimpp/mpp/server';
 import type { PaymentReport } from '@suimpp/mpp/server';
 
 // 1. Library emits on-chain data via callback
@@ -184,8 +189,9 @@ const pendingReports = new Map<string, PaymentReport>();
 
 const mppx = Mppx.create({
   methods: [sui({
-    currency: SUI_USDC_TYPE,
+    currency: USDC,
     recipient: TREASURY_ADDRESS,
+    store: new InMemoryDigestStore(), // Use Redis/DB in production.
     network: 'mainnet',
     onPayment: (report) => {
       pendingReports.set(report.digest, report);

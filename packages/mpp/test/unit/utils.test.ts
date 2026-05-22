@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { parseAmountToRaw } from './utils.js';
+import { describe, expect, it } from 'vitest';
+import {
+  SUI_DOLLAR,
+  SUI_DOLLAR_TYPE,
+  USDC,
+  USDC_TESTNET,
+} from '../../src/constants.js';
+import { parseAmountToRaw } from '../../src/utils.js';
 
 describe('parseAmountToRaw', () => {
   it('converts whole number', () => {
@@ -20,5 +26,16 @@ describe('parseAmountToRaw', () => {
 
   it('truncates below precision', () => {
     expect(parseAmountToRaw('0.0000001', 6)).toBe(0n);
+  });
+});
+
+describe('known currencies', () => {
+  it('exports individual Currency presets', () => {
+    expect(USDC).toMatchObject({ decimals: 6 });
+    expect(USDC_TESTNET).toMatchObject({ decimals: 6 });
+    expect(SUI_DOLLAR).toEqual({
+      type: SUI_DOLLAR_TYPE,
+      decimals: 6,
+    });
   });
 });

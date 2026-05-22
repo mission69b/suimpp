@@ -1,12 +1,24 @@
-import { Method, Receipt } from 'mppx';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
+import { Method, Receipt } from 'mppx';
+import type { Currency } from './constants.js';
 import { suiCharge } from './method.js';
+import { createSuiPaymentProofBytes } from './proof.js';
 import { parseAmountToRaw, withRetry } from './utils.js';
-import { InMemoryDigestStore } from './in-memory-digest-store.js';
 
 export { suiCharge } from './method.js';
-export { SUI_USDC_TYPE } from './constants.js';
+export { InMemoryDigestStore } from './in-memory-digest-store.js';
+export {
+  SUI_DOLLAR,
+  SUI_DOLLAR_TYPE,
+  SUI_USDC_TESTNET_TYPE,
+  SUI_USDC_TYPE,
+  USDC,
+  USDC_TESTNET,
+} from './constants.js';
+export type { Currency } from './constants.js';
 
 export interface DigestStore {
   has(digest: string): Promise<boolean>;
@@ -23,46 +35,42 @@ export interface PaymentReport {
 }
 
 export interface SuiServerOptions {
-  currency: string;
+  currency: Currency;
   recipient: string;
-  /** Number of decimal places for the currency (default: 6, e.g. USDC). */
-  decimals?: number;
   rpcUrl?: string;
-  network?: 'mainnet' | 'testnet' | 'devnet';
-  /** Digest store for replay protection. Required in production. Falls back to in-memory in dev. */
-  store?: DigestStore;
+  network?: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
+  /** Digest store for replay protection. Use a shared durable store in production. */
+  store: DigestStore;
   /** Called after successful on-chain verification with payment data. */
   onPayment?: (report: PaymentReport) => void;
 }
 
-let _defaultStore: DigestStore | undefined;
-
 function resolveStore(options: SuiServerOptions): DigestStore {
-  if (options.store) return options.store;
-
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+  if (!options.store) {
     throw new Error(
-      '[suimpp] DigestStore is required in production. ' +
-      'Provide a Redis or DB-backed store via SuiServerOptions.store. ' +
-      'The default in-memory store is single-instance only and unsafe for multi-instance deployments.',
+      '[suimpp] DigestStore is required. ' +
+        'Provide a Redis or DB-backed store via SuiServerOptions.store. ' +
+        'Use InMemoryDigestStore explicitly only for local development or tests.',
     );
   }
-
-  if (!_defaultStore) {
-    _defaultStore = new InMemoryDigestStore();
-    console.warn(
-      '[suimpp] No DigestStore provided. Using in-memory store. ' +
-      'This is NOT safe for production or multi-instance deployments.',
-    );
+  if (!options.store.has || typeof options.store.has !== 'function') {
+    throw new Error('[suimpp] DigestStore must implement has method');
   }
-  return _defaultStore;
+  if (!options.store.set || typeof options.store.set !== 'function') {
+    throw new Error('[suimpp] DigestStore must implement set method');
+  }
+  return options.store;
 }
 
 export function sui(options: SuiServerOptions) {
+  if (!options.currency) {
+    throw new Error('[suimpp] Currency is required');
+  }
+
   const network = options.network ?? 'mainnet';
-  const decimals = options.decimals ?? 6;
+  const baseUrl = options.rpcUrl ?? getJsonRpcFullnodeUrl(network);
   const client = new SuiGrpcClient({
-    baseUrl: options.rpcUrl ?? `https://fullnode.${network}.sui.io:443`,
+    baseUrl,
     network,
   });
 
@@ -71,12 +79,17 @@ export function sui(options: SuiServerOptions) {
 
   return Method.toServer(suiCharge, {
     defaults: {
-      currency: options.currency,
+      currency: options.currency.type,
       recipient: options.recipient,
     },
 
     async verify({ credential }) {
       const digest = credential.payload.digest;
+      if (credential.challenge.request.currency !== options.currency.type) {
+        throw new Error(
+          `Unsupported currency: ${credential.challenge.request.currency}`,
+        );
+      }
 
       const alreadyUsed = await digestStore.has(digest);
       if (alreadyUsed) {
@@ -85,10 +98,15 @@ export function sui(options: SuiServerOptions) {
         );
       }
 
-      const tx = await withRetry(
-        () => client.core.getTransaction({ digest, include: { balanceChanges: true } }),
+      const tx = await withRetry(() =>
+        client.core.getTransaction({
+          digest,
+          include: { balanceChanges: true, transaction: true },
+        }),
       ).catch(() => {
-        throw new Error(`Could not find the referenced transaction [${digest}]`);
+        throw new Error(
+          `Could not find the referenced transaction [${digest}]`,
+        );
       });
 
       const resolved = tx.Transaction ?? tx.FailedTransaction;
@@ -98,22 +116,45 @@ export function sui(options: SuiServerOptions) {
 
       const payment = resolved.balanceChanges.find(
         (bc) =>
-          bc.coinType === options.currency &&
+          bc.coinType === options.currency.type &&
           normalizeSuiAddress(bc.address) === normalizedRecipient &&
           BigInt(bc.amount) > 0n,
       );
 
       if (!payment) {
-        throw new Error(
-          'Payment not found in transaction balance changes',
-        );
+        throw new Error('Payment not found in transaction balance changes');
       }
 
       const transferredRaw = BigInt(payment.amount);
-      const requestedRaw = parseAmountToRaw(credential.challenge.request.amount, decimals);
+      const requestedRaw = parseAmountToRaw(
+        credential.challenge.request.amount,
+        options.currency.decimals,
+      );
       if (transferredRaw < requestedRaw) {
         throw new Error(
           `Transferred ${transferredRaw} < requested ${requestedRaw} (raw units)`,
+        );
+      }
+
+      const publicKey = await verifyPersonalMessageSignature(
+        createSuiPaymentProofBytes({
+          challenge: credential.challenge,
+          digest,
+        }),
+        credential.payload.signature,
+      ).catch(() => {
+        throw new Error('Invalid payment proof signature');
+      });
+      const sender = resolved.transaction?.sender;
+      if (!sender) {
+        throw new Error('Transaction sender not found');
+      }
+      if (
+        normalizeSuiAddress(publicKey.toSuiAddress()) !==
+        normalizeSuiAddress(sender)
+      ) {
+        throw new Error(
+          'Payment proof signer does not match transaction sender',
         );
       }
 
@@ -128,17 +169,17 @@ export function sui(options: SuiServerOptions) {
 
       const report: PaymentReport = {
         digest,
-        sender: resolved.balanceChanges.find(
-          (bc) => bc.coinType === options.currency && BigInt(bc.amount) < 0n,
-        )?.address,
+        sender,
         recipient: options.recipient,
         amount: credential.challenge.request.amount,
-        currency: options.currency,
+        currency: options.currency.type,
         network,
       };
 
       if (options.onPayment) {
-        try { options.onPayment(report); } catch {}
+        try {
+          options.onPayment(report);
+        } catch {}
       }
 
       return receipt;
