@@ -47,14 +47,11 @@ const res = await mpp.fetch('https://api.example.com/v1/generate', {
             </span>
             <CopyBlock
               code={`import { Mppx } from 'mppx/nextjs';
-import { InMemoryDigestStore, sui } from '@suimpp/mpp/server';
+import { InMemoryDigestStore, USDC, sui } from '@suimpp/mpp/server';
 
 const mpp = Mppx.create({
   methods: [sui({
-    currency: {
-      type: SUI_USDC,
-      decimals: 6,
-    },
+    currency: USDC,
     recipient: '0xYOUR_ADDRESS',
     store: new InMemoryDigestStore(), // Use Redis/DB in production.
   })],
