@@ -21,3 +21,23 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
+
+  e2e:
+    name: E2E (Sui localnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Pre-pull sui-tools image
+        # Warm Docker cache so the testcontainers boot inside vitest doesn't
+        # eat into the test timeout. The tag is pinned in
+        # packages/mpp/test/e2e/globalSetup.ts (SUI_TOOLS_BASE_TAG).
+        run: docker pull mysten/sui-tools:d0b6a5d9663a5e3e4cfe4a04fdc92130f8ed502c
+      - run: pnpm --filter @suimpp/mpp test:e2e
