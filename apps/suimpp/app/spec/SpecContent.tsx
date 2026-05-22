@@ -130,6 +130,7 @@ export const suiCharge = Method.from({
     credential: {
       payload: z.object({
         digest: z.string(),
+        signature: z.string(), // grief protection (since 0.7.0)
       }),
     },
     request: z.object({
@@ -145,7 +146,7 @@ export const suiCharge = Method.from({
       {/* Verification */}
       <Section id="verification" title="Server Verification">
         <p>
-          When the server receives a credential, it performs four verification steps:
+          When the server receives a credential, it performs five verification steps:
         </p>
         <ol className="mt-4 space-y-4">
           <FlowStep num={1} title="Fetch transaction">
@@ -166,6 +167,12 @@ export const suiCharge = Method.from({
           <FlowStep num={4} title="Check amount">
             Convert the challenge <code>amount</code> to raw units using the currency&apos;s
             decimals (USDC = 6). Verify the transferred amount {'>='} requested amount.
+          </FlowStep>
+          <FlowStep num={5} title="Verify grief-protection signature">
+            Recover the signer&apos;s address from the credential&apos;s personal-message
+            signature over <code>{'{ challengeId, digest }'}</code>. Reject if the recovered
+            sender does not match the on-chain transaction sender. Prevents an attacker
+            from stealing a digest someone else paid for. (Required since 0.7.0.)
           </FlowStep>
         </ol>
         <CopyBlock
@@ -193,27 +200,42 @@ if (transferredRaw < requestedRaw) throw new Error('Underpaid');`}
       {/* Client Payment */}
       <Section id="client-payment" title="Client Payment">
         <p>
-          When a client receives a 402 challenge, it builds and executes a Sui transaction:
+          When a client receives a 402 challenge, it builds and executes a Sui transaction,
+          then signs a personal-message proof binding its identity to the digest (grief
+          protection, since 0.7.0):
         </p>
         <CopyBlock
           title="Payment construction"
           lang="TypeScript"
-          code={`import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
+          code={`import { Transaction } from '@mysten/sui/transactions';
 
 const tx = new Transaction();
 tx.setSender(walletAddress);
 
 const amountRaw = parseAmountToRaw(challenge.amount, 6);
-const payment = coinWithBalance({ balance: amountRaw, type: challenge.currency });
-tx.transferObjects([payment], challenge.recipient);
+tx.moveCall({
+  target: '0x2::balance::send_funds',
+  arguments: [
+    tx.balance({ type: challenge.currency, balance: amountRaw }),
+    tx.pure.address(challenge.recipient),
+  ],
+  typeArguments: [challenge.currency],
+});
 
 const result = await client.signAndExecuteTransaction({ transaction: tx });
-// Credential: { digest: result.digest }`}
+
+// Grief-protection proof: signed personal message binding sender to digest
+const proofBytes = createSuiPaymentProofBytes({ challenge, digest: result.digest });
+const { signature } = await signer.signPersonalMessage(proofBytes);
+
+// Credential: { digest: result.digest, signature }`}
         />
         <p className="mt-4">
-          The <code>coinWithBalance</code> helper automatically splits coins from the
-          sender&apos;s balance. The transaction digest becomes the credential&apos;s
-          proof of payment.
+          <code>send_funds</code> deposits the requested USDC amount directly into the
+          recipient&apos;s balance from the sender&apos;s coins. The transaction digest
+          plus the personal-message signature jointly form the credential — the digest
+          proves payment occurred, the signature proves the sender (not just the digest
+          finder) authorised it.
         </p>
       </Section>
 
@@ -265,9 +287,17 @@ const result = await client.signAndExecuteTransaction({ transaction: tx });
       <Section id="security" title="Security Considerations">
         <div className="space-y-4">
           <SecurityItem title="Replay protection">
-            Each transaction digest is unique. Servers should track used digests to prevent
-            replay. Alternatively, the on-chain finality and balance-change check makes
-            double-spending impossible.
+            Each transaction digest is unique. Servers MUST track used digests to prevent
+            replay (the <code>store</code> option on <code>sui()</code> is required since
+            0.7.0). Use <code>InMemoryDigestStore</code> for development; back with Redis
+            or Postgres in production.
+          </SecurityItem>
+          <SecurityItem title="Grief protection">
+            The personal-message signature binds the credential to the actual sender. Without
+            it, anyone observing a digest in mempool or on-chain could submit it as their own
+            credential and consume the paid request. Verifying the signature recovers the
+            sender address; servers MUST reject if the recovered address differs from the
+            transaction&apos;s on-chain sender.
           </SecurityItem>
           <SecurityItem title="Amount precision">
             Always use <code>BigInt</code> for amount comparisons. Floating-point arithmetic
