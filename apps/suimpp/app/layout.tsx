@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@t2000_ai',
+    site: '@t2000ai',
     title: 'suimpp — Machine Payments Protocol on Sui',
     description:
       'An open standard for agent-to-service payments. Settled in USDC on Sui.',
