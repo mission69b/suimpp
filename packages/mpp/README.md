@@ -103,19 +103,36 @@ t2000 pay https://api.example.com/analyze \
 Agent                    API Server
   │                          │
   │── GET /resource ────────>│
-  │<── 402 Payment Required ─│
-  │    {amount, currency,    │
-  │     recipient}           │
   │                          │
-  │── USDC transfer on Sui ──│  (~400ms finality)
+  │<── 402 Payment Required ─│
+  │    WWW-Authenticate: Payment id="…", realm="…",
+  │      method="sui", intent="charge",
+  │      request="eyJhbW91bnQi…"   // base64url JSON
+  │                          │
+  │── USDC transfer on Sui ──│   ~400ms finality
+  │   (digest: Hp4oHHs…)     │
+  │                          │
+  │── Sign personal-message ─│   grief-protection signature
+  │   over { challengeId,    │   binds the digest to the
+  │     amount, currency,    │   on-chain transaction sender
+  │     recipient, digest }  │
   │                          │
   │── GET /resource ────────>│
-  │   + payment credential   │── verify TX on-chain via gRPC
-  │   (digest + signature)   │
+  │   Authorization: Payment │── verify TX on-chain via gRPC
+  │     eyJjaGFsbGVuZ2Ui…    │   • status = success
+  │   // base64url:          │   • amount + recipient match
+  │   //   { challenge,      │   • signer == on-chain sender
+  │   //     payload: {      │   • digest not previously redeemed
+  │   //       digest,       │
+  │   //       signature }}  │
+  │                          │
   │<── 200 OK + data ────────│
+  │    Payment-Receipt: eyJtZXRob2Qi…   // base64url JSON
 ```
 
 No facilitator. No intermediary. The server verifies the Sui transaction directly via gRPC.
+
+The grief-protection signature is **required since `@suimpp/mpp@0.7.0`** — without it, anyone observing a digest on-chain could submit it as their own credential and consume the paid request. The client signs a deterministic message over `{ domain, version, method, intent, challengeId, amount, currency, recipient, digest }` with the same Sui keypair that signed the on-chain transaction; the server verifies the recovered signer equals the transaction sender.
 
 ## Server API
 
@@ -136,12 +153,14 @@ const method = sui({
 });
 ```
 
-Verification checks:
+Verification checks (all <strong>MUST</strong> pass before responding 200):
 - Transaction succeeded on-chain
 - Payment sent to correct recipient (address-normalized comparison)
 - Amount >= requested (BigInt precision, no floating-point)
-- Payment proof signature matches the transaction sender
+- Payment proof signature matches the transaction sender (**required since 0.7.0**)
 - Digest has not been used before according to the required `store`
+
+Any verification failure results in a fresh **402 Payment Required**, not 200/4xx/5xx.
 
 ## Client API
 

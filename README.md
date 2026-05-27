@@ -1,6 +1,6 @@
 # suimpp
 
-Machine Payments Protocol (MPP) on Sui — payment method, discovery tooling, and ecosystem hub.
+Machine Payments Protocol (MPP) on Sui — payment method, discovery tooling, and spec.
 
 [![CI](https://github.com/mission69b/suimpp/actions/workflows/ci.yml/badge.svg)](https://github.com/mission69b/suimpp/actions/workflows/ci.yml)
 
@@ -15,7 +15,7 @@ Machine Payments Protocol (MPP) on Sui — payment method, discovery tooling, an
 
 | App | Domain | Description |
 |-----|--------|-------------|
-| [`suimpp.dev`](apps/suimpp) | [suimpp.dev](https://suimpp.dev) | Ecosystem hub — server registry, payment explorer, spec, docs |
+| [`suimpp.dev`](apps/suimpp) | [suimpp.dev](https://suimpp.dev) | Spec + docs for MPP on Sui (RFC-style protocol reference) |
 
 ## Quick Start
 
@@ -82,23 +82,34 @@ Agent                              Server                           Sui
   │── POST /api/resource ────────────>│                              │
   │                                   │                              │
   │<── 402 Payment Required ─────────│                              │
-  │    WWW-Authenticate: MPP          │                              │
-  │    method="sui" amount="0.01"     │                              │
-  │    currency="0xdba...::usdc"      │                              │
-  │    recipient="0xabc..."           │                              │
+  │    WWW-Authenticate: Payment      │                              │
+  │      id="a1b2…",                  │                              │
+  │      realm="api.example.com",     │                              │
+  │      method="sui",                │                              │
+  │      intent="charge",             │                              │
+  │      request="eyJhbW91bnQi…"      │  // base64url JSON:
+  │                                   │  //   { amount, currency, recipient }
   │                                   │                              │
-  │   ┌─ Build TX: split + transfer USDC ───────────────────────────>│
+  │   ┌─ Build PTB: split + transfer USDC ───────────────────────────>│
   │   └─ TX confirmed ←──────────────────────────────────────────────│
   │      digest: "Hp4oHHs..."        │                              │
   │                                   │                              │
-  │── Retry + credential ───────────>│                              │
-  │   {digest, signature}            │                              │
+  │── Sign personal-message proof ────│  // grief-protection sig over
+  │   { challengeId, amount,         │  //   { domain, version, method,
+  │     currency, recipient, digest } │  //     intent, challengeId, amount,
+  │                                   │  //     currency, recipient, digest }
+  │                                   │                              │
+  │── Retry with Authorization ──────>│                              │
+  │   Authorization: Payment eyJjaGFs… // base64url:
+  │                                   │   { challenge, payload:
+  │                                   │     { digest, signature } }
   │                                   │── getTransaction(digest) ──>│
   │                                   │   verify: success, amount,   │
-  │                                   │   recipient matches          │
+  │                                   │   recipient, signer = sender │
   │                                   │                              │
   │<── 200 OK + response ────────────│                              │
-  │    Payment-Receipt: sui:...       │                              │
+  │    Payment-Receipt: eyJtZXRob2Qi… // base64url:
+  │                                   //   { method, reference, status, timestamp }
 ```
 
 ### Server Validation

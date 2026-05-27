@@ -93,6 +93,8 @@ export function HeroTerminal() {
         {"\n"}
         WWW-Authenticate: Payment id=
         <span style={{ color: "var(--t2k-accent)" }}>{'"a1b2…"'}</span>
+        , realm=
+        <span style={{ color: "var(--t2k-accent)" }}>{'"mpp.t2000.ai"'}</span>
         , method=
         <span style={{ color: "var(--t2k-accent)" }}>{'"sui"'}</span>
         , intent=
@@ -111,8 +113,8 @@ export function HeroTerminal() {
         <span style={{ color: "var(--fg-muted)" }}>380ms</span>
         {"\n"}
         <span style={{ color: "var(--ds-green-700)" }}>HTTP/1.1 200 OK</span>
-        {"\nPayment-Receipt: sui:"}
-        <span style={{ color: "var(--fg-muted)" }}>eyJkaWdlc3QiOiJIcDRv…</span>
+        {"\nPayment-Receipt: "}
+        <span style={{ color: "var(--fg-muted)" }}>eyJtZXRob2QiOiJzdWki…</span>
         {"\n"}
         <span style={{ color: "var(--fg-muted)" }}>
           {`{"choices":[{"message":{"content":"Hello!"}}]}`}

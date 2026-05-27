@@ -150,7 +150,7 @@ WWW-Authenticate: Payment id="a1b2c3...",
             <tr><td>method</td><td>Always <code>"sui"</code> for this binding. Servers <strong>MAY</strong> emit multiple <code>WWW-Authenticate</code> headers to offer alternative methods.</td></tr>
             <tr><td>intent</td><td>Always <code>"charge"</code> for this binding.</td></tr>
             <tr><td>request</td><td>A base64url-encoded JSON object carrying the price terms. The agent <strong>MUST</strong> decode it to obtain <code>amount</code>, <code>currency</code>, and <code>recipient</code>.</td></tr>
-            <tr><td>expires</td><td>Optional. Unix timestamp (seconds) after which the server <strong>MUST</strong> reject any credential bound to this challenge.</td></tr>
+            <tr><td>expires</td><td>Optional. ISO 8601 datetime (<a href="https://www.rfc-editor.org/rfc/rfc3339">RFC 3339</a>) after which the server <strong>MUST</strong> reject any credential bound to this challenge.</td></tr>
           </tbody>
         </table>
         <p>The decoded <code>request</code> object is shaped:</p>
@@ -219,7 +219,7 @@ Authorization: Payment eyJjaGFsbGVuZ2UiOnsiaWQiOiJhMWIyYzMuLi4iLCJyZWFs...`}</co
         <ol>
           <li>Decode the credential and extract <code>challenge</code> and <code>payload</code>.</li>
           <li>If the original challenge carried an <code>expires</code> parameter and it has passed, reject with a fresh 402.</li>
-          <li>If <code>payload.digest</code> is already present in the server's digest store, reject with <code>409 Conflict</code> (replay defense — see §9).</li>
+          <li>If <code>payload.digest</code> is already present in the server's digest store, reject with a fresh <code>402 Payment Required</code> (replay defense — see §9).</li>
           <li>Fetch the transaction from a trusted Sui RPC. The reference implementation uses{" "}
             <code>client.core.getTransaction(&#123;digest, include: &#123;balanceChanges, transaction&#125;&#125;)</code>.</li>
           <li>Verify the transaction status is <code>success</code>.</li>
@@ -291,10 +291,9 @@ Content-Type: application/json
             <tr><th>Status</th><th>Meaning</th></tr>
           </thead>
           <tbody>
-            <tr><td>402</td><td>Payment required, or the supplied credential is invalid, expired, or fails verification.</td></tr>
+            <tr><td>402</td><td>Payment required, or the supplied credential is invalid, expired, replayed, or fails verification. The server <strong>MUST</strong> include a fresh <code>WWW-Authenticate: Payment</code> challenge in the response.</td></tr>
             <tr><td>400</td><td>Malformed <code>Authorization: Payment</code> header or credential JSON.</td></tr>
             <tr><td>404</td><td>Endpoint exists but is not paid (no challenge to issue).</td></tr>
-            <tr><td>409</td><td>Digest already redeemed.</td></tr>
             <tr><td>503</td><td>Sui RPC unreachable — server cannot verify. Client <strong>MAY</strong> retry.</td></tr>
           </tbody>
         </table>
@@ -330,7 +329,7 @@ Content-Type: application/json
           </tbody>
         </table>
         <p>
-          Both have 6 decimals. The constants are exported from <code>@suimpp/mpp</code> as <code>USDC</code> and <code>USDC_TESTNET</code>.
+          Both have 6 decimals. The constants are exported from <code>@suimpp/mpp/server</code> (or the package root <code>@suimpp/mpp</code>) as <code>USDC</code> and <code>USDC_TESTNET</code>.
         </p>
 
         <H2 id="appendix-b">Appendix B · References</H2>
