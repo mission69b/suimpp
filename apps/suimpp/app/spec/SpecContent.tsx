@@ -1,452 +1,359 @@
-'use client';
+/* eslint-disable react/no-unescaped-entities */
 
-import { CopyBlock } from '../components/CopyBlock';
+const TOC = [
+  {
+    group: "OVERVIEW",
+    items: [
+      { id: "preamble", label: "Preamble" },
+      { id: "terminology", label: "Terminology" },
+      { id: "scope", label: "Scope" },
+    ],
+  },
+  {
+    group: "PROTOCOL",
+    items: [
+      { id: "challenge", label: "1. The 402 challenge" },
+      { id: "credential", label: "2. The Payment credential" },
+      { id: "settlement", label: "3. Settlement on Sui" },
+      { id: "verification", label: "4. Verification" },
+    ],
+  },
+  {
+    group: "DISCOVERY",
+    items: [
+      { id: "openapi", label: "5. OpenAPI advertisement" },
+      { id: "extension", label: "6. x-payment-info" },
+    ],
+  },
+  {
+    group: "OPERATIONAL",
+    items: [
+      { id: "reporting", label: "7. Payment reporting" },
+      { id: "errors", label: "8. Errors" },
+      { id: "security", label: "9. Security" },
+    ],
+  },
+  {
+    group: "REFERENCE",
+    items: [
+      { id: "appendix-a", label: "Appendix A · USDC types" },
+      { id: "appendix-b", label: "Appendix B · References" },
+    ],
+  },
+];
 
 export function SpecContent() {
   return (
-    <article className="space-y-12">
-      <header className="space-y-3">
-        <div className="flex items-center gap-3">
-          <h1 className="font-display text-[32px] leading-[1.1]">Sui Charge Method</h1>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-border text-muted">
-            v1.0
+    <div className="su-doc">
+      <aside className="su-doc-toc">
+        {TOC.map((g) => (
+          <div key={g.group}>
+            <div className="group">{g.group}</div>
+            <ul>
+              {g.items.map((it) => (
+                <li key={it.id}>
+                  <a href={`#${it.id}`}>{it.label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </aside>
+
+      <article className="su-prose">
+        <div className="mb-4 flex items-center gap-2.5">
+          <span className="su-tag">
+            <span className="dot" />
+            v0.1 · draft
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              color: "var(--fg-subtle)",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            // SPECIFICATION
           </span>
         </div>
-        <p className="text-sm text-muted max-w-xl leading-relaxed">
-          The <code className="text-text bg-surface px-1.5 py-0.5 rounded border border-border text-xs">sui</code> charge
-          method enables on-chain USDC micropayments on the Sui network for the Machine Payments Protocol (MPP).
-        </p>
-      </header>
 
-      {/* Overview */}
-      <Section id="overview" title="Overview">
-        <p>
-          MPP uses HTTP 402 Payment Required to negotiate payments between clients and servers.
-          The <code>sui</code> charge method implements this negotiation using USDC transfers on
-          the Sui blockchain, providing sub-second finality and trustless verification.
+        <h1>Machine Payments Protocol — Sui</h1>
+        <p style={{ marginTop: 8, color: "var(--fg-muted)", fontSize: 17, lineHeight: 1.55 }}>
+          The MPP standard, bound to <a href="https://sui.io">Sui</a>. <strong>USDC</strong> as the settlement currency.
         </p>
-        <div className="grid sm:grid-cols-4 gap-4 mt-4">
-          {[
-            { label: 'Network', value: 'Sui (mainnet)' },
-            { label: 'Currency', value: 'USDC' },
-            { label: 'Finality', value: '~400ms' },
-            { label: 'Verification', value: 'Peer-to-peer' },
-          ].map((item) => (
-            <div key={item.label} className="rounded-lg border border-border bg-surface p-3 space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-muted/60">{item.label}</div>
-              <div className="text-xs font-medium">{item.value}</div>
-            </div>
-          ))}
-        </div>
-      </Section>
 
-      {/* Flow */}
-      <Section id="flow" title="Protocol Flow">
+        <H2 id="preamble">Preamble</H2>
         <p>
-          Every MPP payment follows a four-step request-challenge-pay-verify cycle:
+          The Machine Payments Protocol (MPP) is an open standard, originally specified by{" "}
+          <a href="https://stripe.com">Stripe</a> and{" "}
+          <a href="https://tempo.io">Tempo Labs</a>, for autonomous agent-to-service payments over HTTP. This document defines the <strong>Sui binding</strong> of MPP — the rules a server and client follow when settling MPP challenges on the Sui chain using USDC.
         </p>
-        <ol className="mt-4 space-y-4">
-          <FlowStep num={1} title="Request">
-            Client sends a standard HTTP request to the server endpoint.
-          </FlowStep>
-          <FlowStep num={2} title="Challenge (402)">
-            Server responds with <code>402 Payment Required</code> and
-            a <code>WWW-Authenticate</code> header containing the charge method, amount, currency, and recipient address.
-          </FlowStep>
-          <FlowStep num={3} title="Pay">
-            Client parses the challenge, builds a Sui transaction transferring the
-            requested USDC amount to the recipient, executes it on-chain, and
-            retries the original request with the transaction digest as a credential.
-          </FlowStep>
-          <FlowStep num={4} title="Verify &amp; Deliver">
-            Server queries the Sui RPC, confirms the transaction succeeded, verifies the
-            payment amount and recipient, then returns the API response.
-          </FlowStep>
+        <p>
+          This document, version <code>0.1</code>, is a draft. Implementers should expect breaking changes between draft revisions. The reference implementation is{" "}
+          <a href="https://www.npmjs.com/package/@suimpp/mpp">@suimpp/mpp</a> at version <code>0.7</code> or later, layered over{" "}
+          <a href="https://www.npmjs.com/package/mppx">mppx</a>. The normative behavior is described in sections 1 through 9. Appendices are informative.
+        </p>
+
+        <H2 id="terminology">Terminology</H2>
+        <p>
+          The key words <strong>MUST</strong>, <strong>SHOULD</strong>, and <strong>MAY</strong> in this document are to be interpreted as described in{" "}
+          <a href="https://www.rfc-editor.org/rfc/rfc2119">RFC 2119</a>.
+        </p>
+        <table>
+          <thead>
+            <tr><th>Term</th><th>Definition</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Agent</td><td>The HTTP client initiating paid requests on behalf of a human or another program.</td></tr>
+            <tr><td>Server</td><td>The HTTP server advertising paid endpoints and verifying payments.</td></tr>
+            <tr><td>Gateway</td><td>An application layer that wraps one or more upstream APIs in MPP semantics.</td></tr>
+            <tr><td>Challenge</td><td>The structured 402 response naming the endpoint's price, recipient, and currency.</td></tr>
+            <tr><td>Credential</td><td>The signed payload an agent attaches to a retry to satisfy a challenge.</td></tr>
+            <tr><td>Digest</td><td>A Sui transaction digest — the canonical reference to a settled payment.</td></tr>
+            <tr><td>Coin type</td><td>A Move type tag identifying the asset being transferred, e.g. <code>0xdba…::usdc::USDC</code>.</td></tr>
+            <tr><td>Sponsored transaction</td><td>A Sui transaction whose gas is paid by a sponsor object, leaving the sender to pay zero SUI.</td></tr>
+          </tbody>
+        </table>
+
+        <H2 id="scope">Scope</H2>
+        <p>This binding defines:</p>
+        <ul>
+          <li>The shape of the HTTP <code>402 Payment Required</code> challenge a Sui-MPP server returns.</li>
+          <li>The shape of the credential a client sends to satisfy that challenge.</li>
+          <li>The verification a server <strong>MUST</strong> perform against the Sui chain before responding 200.</li>
+          <li>The OpenAPI extension a server <strong>SHOULD</strong> use to advertise its terms.</li>
+        </ul>
+        <p>
+          Out of scope: how the agent acquires USDC, how the server prices its endpoints, how off-chain receipts are stored, or how clients select among multiple offered payment methods.
+        </p>
+
+        <H2 id="challenge">1. The 402 challenge</H2>
+        <p>
+          When a request arrives at a paid endpoint without a valid <code>Authorization</code> header, the server <strong>MUST</strong> respond with HTTP status <code>402 Payment Required</code> and one or more <code>WWW-Authenticate</code> headers using the <code>Payment</code> scheme. Each header carries a single offered payment method:
+        </p>
+        <pre><code>{`HTTP/1.1 402 Payment Required
+WWW-Authenticate: Payment id="a1b2c3...",
+  realm="api.example.com",
+  method="sui",
+  intent="charge",
+  request="eyJhbW91bnQiOiIwLjAxMiIsImN1cnJlbmN5IjoiMHhkYmEzNDY3M..."`}</code></pre>
+        <p>The parameters carry the following meanings:</p>
+        <table>
+          <thead>
+            <tr><th>Parameter</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>id</td><td>An opaque challenge identifier, unique per 402 response. Used by the client to bind its credential to a specific challenge.</td></tr>
+            <tr><td>realm</td><td>An opaque realm string (typically the server's hostname). Clients <strong>SHOULD</strong> echo this back in any UI.</td></tr>
+            <tr><td>method</td><td>Always <code>"sui"</code> for this binding. Servers <strong>MAY</strong> emit multiple <code>WWW-Authenticate</code> headers to offer alternative methods.</td></tr>
+            <tr><td>intent</td><td>Always <code>"charge"</code> for this binding.</td></tr>
+            <tr><td>request</td><td>A base64url-encoded JSON object carrying the price terms. The agent <strong>MUST</strong> decode it to obtain <code>amount</code>, <code>currency</code>, and <code>recipient</code>.</td></tr>
+            <tr><td>expires</td><td>Optional. Unix timestamp (seconds) after which the server <strong>MUST</strong> reject any credential bound to this challenge.</td></tr>
+          </tbody>
+        </table>
+        <p>The decoded <code>request</code> object is shaped:</p>
+        <pre><code>{`{
+  "amount":    "0.012",                  // decimal string, in units of currency
+  "currency":  "0xdba…::usdc::USDC",     // full Sui Move type tag
+  "recipient": "0xabc…def012"            // Sui address that MUST receive the transfer
+}`}</code></pre>
+        <p>
+          Servers <strong>MUST</strong> reject any retry whose decoded request mismatches the original challenge by amount, currency, or recipient — agents <strong>MUST NOT</strong> tamper with these fields.
+        </p>
+
+        <H2 id="credential">2. The Payment credential</H2>
+        <p>
+          To satisfy a 402 challenge, the client <strong>MUST</strong> retry the original request with an additional <code>Authorization</code> header using the <code>Payment</code> scheme:
+        </p>
+        <pre><code>{`POST /api/resource HTTP/1.1
+Host: api.example.com
+Authorization: Payment eyJjaGFsbGVuZ2UiOnsiaWQiOiJhMWIyYzMuLi4iLCJyZWFs...`}</code></pre>
+        <p>
+          The portion following <code>Payment </code> is a base64url-encoded JSON object containing:
+        </p>
+        <pre><code>{`{
+  "challenge": { … },           // the deserialized challenge, echoed back verbatim
+  "payload": {
+    "digest":    "Hp4oHHs...",  // the Sui transaction digest
+    "signature": "ALxw..."      // grief-protection signature (REQUIRED since 0.7)
+  }
+}`}</code></pre>
+        <p>
+          The <code>payload.signature</code> field is a Sui <em>personal-message signature</em> over a deterministic message binding the sender's identity to this exact challenge and digest. Without it, an attacker who observes a digest on-chain or in transit could submit it as their own credential and consume the paid request. The signed message is:
+        </p>
+        <pre><code>{`{
+  "domain":       "suimpp.sui.payment-proof",
+  "version":      1,
+  "method":       "sui",
+  "intent":       "charge",
+  "challengeId":  "<challenge.id>",
+  "amount":       "<challenge.request.amount>",
+  "currency":     "<challenge.request.currency>",
+  "recipient":    "<challenge.request.recipient>",
+  "digest":       "<payload.digest>"
+}`}</code></pre>
+        <p>
+          The client <strong>MUST</strong> sign this message with the same Sui keypair that signed the on-chain settlement transaction (§3).
+        </p>
+
+        <H2 id="settlement">3. Settlement on Sui</H2>
+        <p>
+          The client builds a Sui programmable transaction block (PTB) that transfers <code>amount</code> of <code>currency</code> to <code>recipient</code>, signs it, and submits it. The transaction <strong>MUST</strong>:
+        </p>
+        <ul>
+          <li>Be executed against the network advertised in the 402 challenge (see Appendix A for canonical coin types per network).</li>
+          <li>Reach status <code>success</code> before the credential is sent.</li>
+          <li>Transfer at least <code>amount</code> of <code>currency</code> to <code>recipient</code>, net of any coin splits. Overpayment is permitted but not refunded.</li>
+          <li>Be signed by a keypair whose address equals the on-chain sender. Multi-sig and sponsored signing schemes are permitted as long as the eventual on-chain sender matches.</li>
+        </ul>
+        <p>
+          Sui's <strong>sponsored transaction</strong> capability is supported. When the canonical USDC coin type is used (Appendix A), the reference SDK requests a sponsor object from the Sui Foundation gasless tier and constructs the PTB so the sender pays zero SUI for gas. Servers <strong>MUST NOT</strong> reject a payment for being sponsored.
+        </p>
+
+        <H2 id="verification">4. Verification</H2>
+        <p>
+          On receiving a retry with an <code>Authorization: Payment</code> header, the server <strong>MUST</strong> perform <em>all</em> of the following before responding 200:
+        </p>
+        <ol>
+          <li>Decode the credential and extract <code>challenge</code> and <code>payload</code>.</li>
+          <li>If the original challenge carried an <code>expires</code> parameter and it has passed, reject with a fresh 402.</li>
+          <li>If <code>payload.digest</code> is already present in the server's digest store, reject with <code>409 Conflict</code> (replay defense — see §9).</li>
+          <li>Fetch the transaction from a trusted Sui RPC. The reference implementation uses{" "}
+            <code>client.core.getTransaction(&#123;digest, include: &#123;balanceChanges, transaction&#125;&#125;)</code>.</li>
+          <li>Verify the transaction status is <code>success</code>.</li>
+          <li>Verify the balance changes include an entry where <code>coinType</code> equals <code>request.currency</code>, the recipient address (normalized) equals <code>request.recipient</code>, and the transferred amount (in raw units) is greater than or equal to <code>request.amount</code> converted using the currency's decimals.</li>
+          <li>Verify the grief-protection signature: recover the signing public key from <code>payload.signature</code> over the message defined in §2. Reject if the recovered Sui address does not equal the on-chain transaction sender.</li>
+          <li>Persist <code>payload.digest</code> in the digest store. The store <strong>MUST</strong> retain the digest for at least the challenge expiry window.</li>
+          <li>Handle the original request and respond <code>200 OK</code>. The response <strong>SHOULD</strong> include a <code>Payment-Receipt</code> header carrying the receipt token.</li>
         </ol>
-      </Section>
-
-      {/* Challenge Format */}
-      <Section id="challenge" title="Challenge Format">
         <p>
-          When a server requires payment, it responds with <code>402</code> and a challenge
-          encoded in the <code>WWW-Authenticate</code> header:
+          Any failure in steps 2 through 7 <strong>MUST</strong> result in a fresh <code>402 Payment Required</code> response. The server <strong>MUST NOT</strong> consume agent balance or partially fulfill a request that fails verification.
         </p>
-        <CopyBlock
-          title="Response Header"
-          code={`HTTP/1.1 402 Payment Required
-WWW-Authenticate: MPP method="sui",
-  amount="0.01",
-  currency="0xdba346...::usdc::USDC",
-  recipient="0xYOUR_SUI_ADDRESS"`}
-        />
-        <div className="mt-4">
-          <Table
-            headers={['Parameter', 'Type', 'Description']}
-            rows={[
-              ['method', 'string', '"sui" — identifies this charge method'],
-              ['amount', 'string', 'Human-readable amount (e.g. "0.01" = 1 cent USDC)'],
-              ['currency', 'string', 'Sui coin type — fully qualified Move type'],
-              ['recipient', 'string', 'Sui address to receive payment (0x-prefixed, 64 hex chars)'],
-            ]}
-          />
-        </div>
-      </Section>
 
-      {/* Credential Format */}
-      <Section id="credential" title="Credential Format">
+        <H2 id="openapi">5. OpenAPI advertisement</H2>
         <p>
-          After executing the on-chain payment, the client retries the request with
-          the credential in the <code>Authorization</code> header:
+          Servers <strong>SHOULD</strong> publish an OpenAPI 3.x document at <code>/openapi.json</code>. This makes the server discoverable by tooling — including the{" "}
+          <a href="https://www.npmjs.com/package/@suimpp/discovery">@suimpp/discovery</a> validator — without out-of-band coordination.
         </p>
-        <CopyBlock
-          title="Retry Request Header"
-          code={`Authorization: MPP method="sui", digest="<TX_DIGEST>"`}
-        />
-        <div className="mt-4">
-          <Table
-            headers={['Parameter', 'Type', 'Description']}
-            rows={[
-              ['method', 'string', '"sui" — matches the challenge method'],
-              ['digest', 'string', 'Sui transaction digest (Base58-encoded, 44 chars)'],
-            ]}
-          />
-        </div>
-      </Section>
-
-      {/* Method Schema */}
-      <Section id="schema" title="Method Schema">
         <p>
-          The <code>sui</code> charge method is defined using the <code>mppx</code> Method schema:
+          The document <strong>SHOULD</strong> mark every paid operation with the <code>x-payment-info</code> extension defined in §6, and <strong>SHOULD</strong> declare a <code>"402"</code> response describing the challenge body shape.
         </p>
-        <CopyBlock
-          title="method.ts"
-          lang="TypeScript"
-          code={`import { Method, z } from 'mppx';
 
-export const suiCharge = Method.from({
-  intent: 'charge',
-  name: 'sui',
-  schema: {
-    credential: {
-      payload: z.object({
-        digest: z.string(),
-        signature: z.string(), // grief protection (since 0.7.0)
-      }),
-    },
-    request: z.object({
-      amount: z.string(),
-      currency: z.string(),
-      recipient: z.string(),
-    }),
-  },
-});`}
-        />
-      </Section>
-
-      {/* Verification */}
-      <Section id="verification" title="Server Verification">
+        <H2 id="extension">6. <code>x-payment-info</code></H2>
+        <p>The <code>x-payment-info</code> object is attached to an OpenAPI operation to declare the endpoint's price terms:</p>
+        <pre><code>{`paths:
+  /v1/chat/completions:
+    post:
+      x-payment-info:
+        method: sui
+        amount: "0.005"
+        currency: "0xdba…::usdc::USDC"
+        recipient: "0xabc…def012"
+        network: mainnet
+        unit: per_request
+      responses:
+        "200": { … }
+        "402": { … }`}</code></pre>
         <p>
-          When the server receives a credential, it performs five verification steps:
+          Allowed values for <code>unit</code> are <code>per_request</code>, <code>per_token</code>, <code>per_second</code>, and <code>tiered</code>. When <code>per_token</code> or <code>tiered</code> is used, the actual challenge amount is computed at request time and is only authoritative in the 402 response.
         </p>
-        <ol className="mt-4 space-y-4">
-          <FlowStep num={1} title="Fetch transaction">
-            Query the Sui RPC with <code>getTransaction</code> using the provided digest.
-            Include <code>balanceChanges</code> in the response.
-          </FlowStep>
-          <FlowStep num={2} title="Check success">
-            Verify <code>status.success === true</code>. Reject failed or pending transactions.
-          </FlowStep>
-          <FlowStep num={3} title="Find payment">
-            Scan <code>balanceChanges</code> for an entry where:
-            <ul className="mt-1.5 ml-4 space-y-1 text-muted">
-              <li>• <code>coinType</code> matches the requested currency</li>
-              <li>• <code>address</code> matches the recipient (normalized)</li>
-              <li>• <code>amount</code> is positive (incoming transfer)</li>
-            </ul>
-          </FlowStep>
-          <FlowStep num={4} title="Check amount">
-            Convert the challenge <code>amount</code> to raw units using the currency&apos;s
-            decimals (USDC = 6). Verify the transferred amount {'>='} requested amount.
-          </FlowStep>
-          <FlowStep num={5} title="Verify grief-protection signature">
-            Recover the signer&apos;s address from the credential&apos;s personal-message
-            signature over <code>{'{ challengeId, digest }'}</code>. Reject if the recovered
-            sender does not match the on-chain transaction sender. Prevents an attacker
-            from stealing a digest someone else paid for. (Required since 0.7.0.)
-          </FlowStep>
-        </ol>
-        <CopyBlock
-          title="Verification logic (simplified)"
-          lang="TypeScript"
-          code={`const tx = await client.getTransaction({ digest, include: { balanceChanges: true } });
 
-if (!tx.status.success) throw new Error('Transaction failed');
-
-const payment = tx.balanceChanges.find(
-  (bc) =>
-    bc.coinType === currency &&
-    normalize(bc.address) === normalize(recipient) &&
-    BigInt(bc.amount) > 0n,
-);
-
-if (!payment) throw new Error('Payment not found');
-
-const transferredRaw = BigInt(payment.amount);
-const requestedRaw = parseAmountToRaw(amount, 6); // USDC = 6 decimals
-if (transferredRaw < requestedRaw) throw new Error('Underpaid');`}
-        />
-      </Section>
-
-      {/* Client Payment */}
-      <Section id="client-payment" title="Client Payment">
+        <H2 id="reporting">7. Payment reporting (informative)</H2>
         <p>
-          When a client receives a 402 challenge, it builds and executes a Sui transaction,
-          then signs a personal-message proof binding its identity to the digest (grief
-          protection, since 0.7.0):
+          Gateways <strong>MAY</strong> report settled payments to a directory service for ecosystem visibility. Reporting is opt-in and <strong>MUST NOT</strong> block a 200 response.
         </p>
-        <CopyBlock
-          title="Payment construction"
-          lang="TypeScript"
-          code={`import { Transaction } from '@mysten/sui/transactions';
-
-const tx = new Transaction();
-tx.setSender(walletAddress);
-
-const amountRaw = parseAmountToRaw(challenge.amount, 6);
-tx.moveCall({
-  target: '0x2::balance::send_funds',
-  arguments: [
-    tx.balance({ type: challenge.currency, balance: amountRaw }),
-    tx.pure.address(challenge.recipient),
-  ],
-  typeArguments: [challenge.currency],
-});
-
-const result = await client.signAndExecuteTransaction({ transaction: tx });
-
-// Grief-protection proof: signed personal message binding sender to digest
-const proofBytes = createSuiPaymentProofBytes({ challenge, digest: result.digest });
-const { signature } = await signer.signPersonalMessage(proofBytes);
-
-// Credential: { digest: result.digest, signature }`}
-        />
-        <p className="mt-4">
-          <code>send_funds</code> deposits the requested USDC amount directly into the
-          recipient&apos;s balance from the sender&apos;s coins. The transaction digest
-          plus the personal-message signature jointly form the credential — the digest
-          proves payment occurred, the signature proves the sender (not just the digest
-          finder) authorised it.
-        </p>
-      </Section>
-
-      {/* Currency */}
-      <Section id="currency" title="USDC on Sui">
         <p>
-          The canonical USDC coin type on Sui mainnet:
+          The library emits on-chain context via an <code>onPayment</code> callback. The host enriches it with HTTP context (which service / endpoint was called) and POSTs the joined record to any registry. A single report carries all fields:
         </p>
-        <CopyBlock
-          code="0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC"
-        />
-        <div className="mt-4">
-          <Table
-            headers={['Property', 'Value']}
-            rows={[
-              ['Decimals', '6'],
-              ['1 USDC', '1,000,000 raw units'],
-              ['$0.01', '10,000 raw units'],
-              ['Min practical', '$0.000001 (1 raw unit)'],
-              ['Issuer', 'Circle (native issuance on Sui)'],
-            ]}
-          />
-        </div>
-      </Section>
+        <pre><code>{`POST https://<registry>/api/report
+Content-Type: application/json
 
-      {/* Amount Parsing */}
-      <Section id="amounts" title="Amount Parsing">
+{
+  "digest":    "Hp4oHHs...",
+  "sender":    "0xagent...",
+  "recipient": "0xabc...def012",
+  "amount":    "0.012",
+  "currency":  "0xdba...::usdc::USDC",
+  "network":   "mainnet",
+  "serverUrl": "https://api.example.com",
+  "service":   "openai",
+  "endpoint":  "/v1/chat/completions"
+}`}</code></pre>
+
+        <H2 id="errors">8. Errors</H2>
         <p>
-          Amounts in challenges and credentials are human-readable strings (e.g. <code>&quot;0.01&quot;</code>).
-          Both client and server must convert to raw units for on-chain operations:
+          Errors are conveyed via HTTP status codes. Servers <strong>MUST</strong> use the codes below; clients <strong>MUST</strong> treat unrecognized codes per <a href="https://www.rfc-editor.org/rfc/rfc9110">RFC 9110</a>.
         </p>
-        <CopyBlock
-          title="parseAmountToRaw"
-          lang="TypeScript"
-          code={`function parseAmountToRaw(amount: string, decimals: number): bigint {
-  const [whole = '0', frac = ''] = amount.split('.');
-  const paddedFrac = frac.padEnd(decimals, '0').slice(0, decimals);
-  return BigInt(whole + paddedFrac);
-}
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>402</td><td>Payment required, or the supplied credential is invalid, expired, or fails verification.</td></tr>
+            <tr><td>400</td><td>Malformed <code>Authorization: Payment</code> header or credential JSON.</td></tr>
+            <tr><td>404</td><td>Endpoint exists but is not paid (no challenge to issue).</td></tr>
+            <tr><td>409</td><td>Digest already redeemed.</td></tr>
+            <tr><td>503</td><td>Sui RPC unreachable — server cannot verify. Client <strong>MAY</strong> retry.</td></tr>
+          </tbody>
+        </table>
 
-// Examples:
-// parseAmountToRaw("0.01", 6)  → 10000n
-// parseAmountToRaw("1",    6)  → 1000000n
-// parseAmountToRaw("0.5",  6)  → 500000n`}
-        />
-      </Section>
+        <H2 id="security">9. Security considerations</H2>
+        <ul>
+          <li><strong>Replay defense.</strong> A digest <strong>MUST</strong> be redeemable exactly once. Servers <strong>MUST</strong> persist consumed digests for at least the challenge expiry window. The reference implementation requires a non-default <code>DigestStore</code> in production; <code>InMemoryDigestStore</code> is for development only.</li>
+          <li><strong>Grief protection.</strong> Without the §2 signature, anyone observing a digest in mempool or on-chain could submit it as their own credential and consume the paid request. Servers <strong>MUST</strong> verify the recovered signer equals the on-chain transaction sender.</li>
+          <li><strong>Recipient verification.</strong> The recipient address in the decoded request <strong>MUST</strong> exactly match the one found on-chain. Address normalization (case, padding, zero-extension) is the server's responsibility.</li>
+          <li><strong>Network confusion.</strong> Servers <strong>MUST</strong> reject digests from networks other than the one they configured — a testnet digest <strong>MUST NOT</strong> satisfy a mainnet challenge.</li>
+          <li><strong>Amount precision.</strong> Servers <strong>MUST</strong> compare transferred and requested amounts in raw integer units (BigInt). Floating-point arithmetic introduces rounding errors that can be exploited to underpay.</li>
+          <li><strong>RPC trust.</strong> Verification is only as trustworthy as the Sui RPC the server queries. Production servers <strong>SHOULD</strong> consult more than one independent RPC or run a self-hosted full node.</li>
+          <li><strong>Privacy.</strong> The sender address is on-chain and public. Servers <strong>SHOULD</strong> avoid logging sender addresses alongside personally identifying request context unless required.</li>
+        </ul>
 
-      {/* Security */}
-      <Section id="security" title="Security Considerations">
-        <div className="space-y-4">
-          <SecurityItem title="Replay protection">
-            Each transaction digest is unique. Servers MUST track used digests to prevent
-            replay (the <code>store</code> option on <code>sui()</code> is required since
-            0.7.0). Use <code>InMemoryDigestStore</code> for development; back with Redis
-            or Postgres in production.
-          </SecurityItem>
-          <SecurityItem title="Grief protection">
-            The personal-message signature binds the credential to the actual sender. Without
-            it, anyone observing a digest in mempool or on-chain could submit it as their own
-            credential and consume the paid request. Verifying the signature recovers the
-            sender address; servers MUST reject if the recovered address differs from the
-            transaction&apos;s on-chain sender.
-          </SecurityItem>
-          <SecurityItem title="Amount precision">
-            Always use <code>BigInt</code> for amount comparisons. Floating-point arithmetic
-            can produce rounding errors that allow underpayment.
-          </SecurityItem>
-          <SecurityItem title="Address normalization">
-            Always normalize Sui addresses (lowercase, 0x prefix, zero-padded to 64 hex chars)
-            before comparison. Use <code>normalizeSuiAddress()</code> from <code>@mysten/sui/utils</code>.
-          </SecurityItem>
-          <SecurityItem title="Transaction finality">
-            Sui provides immediate finality. No confirmation wait is needed — if the RPC
-            returns the transaction with <code>success: true</code>, the payment is irreversible.
-          </SecurityItem>
-          <SecurityItem title="RPC trust">
-            Verification depends on a trusted Sui RPC endpoint. Use official fullnodes
-            or run your own for production deployments.
-          </SecurityItem>
-        </div>
-      </Section>
-
-      {/* Packages */}
-      <Section id="packages" title="Reference Implementation">
-        <p>The official TypeScript implementation:</p>
-        <div className="mt-4 space-y-3">
-          <PackageLink
-            name="@suimpp/mpp"
-            description="Sui USDC charge method (client + server)"
-            href="https://www.npmjs.com/package/@suimpp/mpp"
-          />
-          <PackageLink
-            name="mppx"
-            description="MPP protocol SDK (framework-agnostic)"
-            href="https://www.npmjs.com/package/mppx"
-          />
-          <PackageLink
-            name="@suimpp/discovery"
-            description="Server validation CLI"
-            href="https://www.npmjs.com/package/@suimpp/discovery"
-          />
-        </div>
-      </Section>
-
-      {/* Links */}
-      <section className="border-t border-border pt-8 space-y-2">
-        {[
-          { href: '/discovery', label: 'Discovery spec — OpenAPI & validation' },
-          { href: '/agent', label: 'Use APIs with MPP' },
-          { href: '/register', label: 'Register your server' },
-          { href: '/docs', label: 'Developer guide' },
-          { href: '/servers', label: 'Browse servers' },
-          { href: 'https://mpp.dev', label: 'MPP Protocol' },
-          { href: 'https://github.com/mission69b/suimpp', label: 'GitHub' },
-        ].map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            target={link.href.startsWith('/') ? undefined : '_blank'}
-            rel={link.href.startsWith('/') ? undefined : 'noopener noreferrer'}
-            className="flex items-center gap-2 text-xs text-muted hover:text-text transition-colors"
-          >
-            <span className="text-muted">→</span>
-            {link.label}
-          </a>
-        ))}
-      </section>
-    </article>
-  );
-}
-
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
-  return (
-    <section id={id} className="space-y-3">
-      <h2 className="font-display text-[24px] leading-[1.15]">{title}</h2>
-      <div className="text-sm text-muted leading-relaxed [&_code]:text-text [&_code]:bg-surface [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:border [&_code]:border-border [&_code]:text-xs [&_code]:font-mono">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function FlowStep({ num, title, children }: { num: number; title: string; children: React.ReactNode }) {
-  return (
-    <li className="flex gap-3">
-      <span className="shrink-0 w-6 h-6 rounded-full bg-border text-muted text-xs font-mono flex items-center justify-center">
-        {num}
-      </span>
-      <div>
-        <span className="text-text font-display text-[18px] leading-[1.2]">{title}</span>
-        <div className="mt-1 text-sm text-muted leading-relaxed [&_code]:text-text [&_code]:bg-surface [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:border [&_code]:border-border [&_code]:text-xs [&_code]:font-mono">
-          {children}
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
-  return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-surface">
-            {headers.map((h) => (
-              <th key={h} className="text-left px-4 py-2 font-medium text-muted/80 border-b border-border">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-b border-border/50 last:border-0">
-              {row.map((cell, j) => (
-                <td key={j} className={`px-4 py-2 ${j === 0 ? 'font-mono text-text' : 'text-muted'}`}>
-                  {cell}
-                </td>
-              ))}
+        <H2 id="appendix-a">Appendix A · Canonical USDC types</H2>
+        <p>
+          The following coin types are recognized as USDC by the reference implementation. Servers <strong>SHOULD</strong> accept any matching their declared network; clients <strong>SHOULD</strong> default to the mainnet type.
+        </p>
+        <table>
+          <thead>
+            <tr><th>Network</th><th>Coin type</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>mainnet</td>
+              <td><code>0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC</code></td>
             </tr>
-          ))}
-        </tbody>
-      </table>
+            <tr>
+              <td>testnet</td>
+              <td><code>0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Both have 6 decimals. The constants are exported from <code>@suimpp/mpp</code> as <code>USDC</code> and <code>USDC_TESTNET</code>.
+        </p>
+
+        <H2 id="appendix-b">Appendix B · References</H2>
+        <ul>
+          <li><a href="https://github.com/mission69b/suimpp">github.com/mission69b/suimpp</a> — reference implementation source.</li>
+          <li><a href="https://www.npmjs.com/package/@suimpp/mpp">@suimpp/mpp</a> — Sui USDC payment method for MPP.</li>
+          <li><a href="https://www.npmjs.com/package/mppx">mppx</a> — framework-agnostic MPP protocol SDK.</li>
+          <li><a href="https://docs.sui.io">docs.sui.io</a> — Sui transaction semantics, PTBs, sponsored transactions.</li>
+          <li><a href="https://www.rfc-editor.org/rfc/rfc9110">RFC 9110</a> — HTTP semantics.</li>
+          <li><a href="https://spec.openapis.org/oas/v3.1.0">OpenAPI 3.1</a> — interface description format.</li>
+        </ul>
+      </article>
     </div>
   );
 }
 
-function SecurityItem({ title, children }: { title: string; children: React.ReactNode }) {
+function H2({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-4 space-y-1">
-      <div className="text-xs font-medium text-text">{title}</div>
-      <div className="text-xs text-muted leading-relaxed [&_code]:text-text [&_code]:bg-bg [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:border [&_code]:border-border [&_code]:text-[11px] [&_code]:font-mono">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function PackageLink({ name, description, href }: { name: string; description: string; href: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center justify-between rounded-lg border border-border bg-surface p-4 hover:border-accent/30 transition-colors group"
-    >
-      <div>
-        <span className="font-mono text-sm text-text">{name}</span>
-        <p className="text-xs text-muted mt-0.5">{description}</p>
-      </div>
-      <span className="text-muted group-hover:text-accent transition-colors">→</span>
-    </a>
+    <h2 id={id}>
+      {children}
+      <a className="su-anchor" href={`#${id}`} aria-label="Link to section">
+        #
+      </a>
+    </h2>
   );
 }

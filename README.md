@@ -101,34 +101,12 @@ Agent                              Server                           Sui
   │    Payment-Receipt: sui:...       │                              │
 ```
 
-### Server Registration
+### Server Validation
 
-Any server implementing the MPP protocol with Sui USDC can register on [suimpp.dev](https://suimpp.dev). Registration is validation-gated — no manual approval needed.
+Any server implementing the MPP protocol with Sui USDC can be validated by anyone — no central registry, no manual approval. Use `@suimpp/discovery` locally or in CI:
 
-```
-Provider enters URL at suimpp.dev/register
-  │
-  ├── 1. Validate (POST /api/validate)
-  │     ├── Fetch {url}/openapi.json
-  │     │   → Parse OpenAPI 3.x document
-  │     │   → Extract endpoints with x-payment-info
-  │     │   → Validate schemas, pricing, 402 responses
-  │     │
-  │     ├── Probe first POST endpoint
-  │     │   → Send empty request, expect 402
-  │     │   → Parse WWW-Authenticate header
-  │     │   → Verify: method=sui, valid USDC type, valid recipient
-  │     │
-  │     └── Return pass/fail checklist
-  │
-  ├── 2. Preview
-  │     → Server name, endpoint count, price range
-  │     → Scrollable endpoint list with pricing
-  │
-  └── 3. Register (POST /api/register)
-        → Re-validates server-side (never trust client)
-        → Creates Server record with slug, categories, endpoints
-        → Server appears at /servers/{slug}
+```bash
+npx @suimpp/discovery check <url>
 ```
 
 **What gets validated:**
@@ -145,7 +123,7 @@ Provider enters URL at suimpp.dev/register
 
 ### Payment Reporting
 
-Payments are reported by the gateway (application layer), not by the library directly. This ensures every report includes both on-chain data and HTTP request context.
+Payments are reported by the gateway (application layer), not by the library directly. This ensures every report includes both on-chain data and HTTP request context. The destination is configurable — point it at any analytics endpoint you control.
 
 ```
   @suimpp/mpp (library)                 Gateway (application)
@@ -168,9 +146,9 @@ Payments are reported by the gateway (application layer), not by the library dir
                                                    │
                                                    ▼
                                         ┌─────────────────────┐
-                                        │ suimpp.dev/api/report│
+                                        │ Your analytics      │
+                                        │ endpoint            │
                                         │                     │
-                                        │ Match server by URL │
                                         │ Dedupe by digest    │
                                         │ Store payment       │
                                         └─────────────────────┘
@@ -207,8 +185,9 @@ if (response.status !== 402) {
   const report = digest ? pendingReports.get(digest) : undefined;
   if (report) {
     pendingReports.delete(digest);
-    // 3. Single report with all fields
-    fetch('https://suimpp.dev/api/report', {
+    // 3. Single report with all fields, sent to whichever analytics
+    //    endpoint you control. There's no central registry to call.
+    fetch(YOUR_REPORTING_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

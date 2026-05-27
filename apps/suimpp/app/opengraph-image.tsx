@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'suimpp — Machine Payments on Sui';
+export const alt = 'suimpp — Machine Payments Protocol on Sui';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -16,47 +16,57 @@ export default function Image() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0a0a0c',
+          background: '#0a0a0a',
           position: 'relative',
         }}
       >
-        {/* Radial glow */}
+        {/* Subtle grid */}
         <div
           style={{
             position: 'absolute',
-            top: '40%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 600,
-            height: 600,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(99,102,241,0.08), transparent 70%)',
+            inset: 0,
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
           }}
         />
 
-        {/* Protocol label */}
+        {/* Eyebrow */}
         <div
           style={{
             fontFamily: 'monospace',
             fontSize: 12,
-            color: '#6366f1',
-            letterSpacing: '0.2em',
+            color: '#888888',
+            letterSpacing: '0.16em',
             textTransform: 'uppercase',
-            marginBottom: 16,
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
           }}
         >
-          Open Protocol
+          <span
+            style={{
+              padding: '3px 9px',
+              border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 4,
+              fontSize: 10.5,
+              color: '#888',
+            }}
+          >
+            V0.1 · DRAFT
+          </span>
+          <span>// MACHINE PAYMENTS PROTOCOL · ON SUI</span>
         </div>
 
         {/* Brand */}
         <div
           style={{
-            fontFamily: 'monospace',
-            fontSize: 64,
-            fontWeight: 700,
-            color: '#ffffff',
-            letterSpacing: '-1px',
+            fontFamily: 'sans-serif',
+            fontSize: 96,
+            fontWeight: 600,
+            color: '#ededed',
+            letterSpacing: '-0.045em',
           }}
         >
           suimpp
@@ -65,40 +75,27 @@ export default function Image() {
         {/* Tagline */}
         <div
           style={{
-            fontFamily: 'serif',
-            fontSize: 24,
+            fontFamily: 'sans-serif',
+            fontSize: 26,
             color: '#888888',
-            marginTop: 16,
-            fontStyle: 'italic',
-          }}
-        >
-          Machine Payments on Sui
-        </div>
-
-        {/* Description */}
-        <div
-          style={{
-            fontFamily: 'monospace',
-            fontSize: 14,
-            color: '#555555',
-            marginTop: 24,
-            letterSpacing: '0.03em',
-            maxWidth: 500,
+            marginTop: 18,
+            letterSpacing: '-0.011em',
             textAlign: 'center',
-            lineHeight: 1.6,
+            maxWidth: 720,
+            lineHeight: 1.35,
           }}
         >
-          AI agents pay for APIs with USDC. No keys. No accounts.
+          An open standard for agent-to-service payments.
         </div>
 
-        {/* URL */}
+        {/* Footer URL */}
         <div
           style={{
             position: 'absolute',
-            bottom: 32,
+            bottom: 36,
             fontFamily: 'monospace',
             fontSize: 13,
-            color: '#444444',
+            color: '#555555',
             letterSpacing: '0.06em',
           }}
         >

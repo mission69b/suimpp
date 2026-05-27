@@ -132,7 +132,7 @@ const method = sui({
   store: new InMemoryDigestStore(), // Required. Use Redis/DB in production.
   rpcUrl: '...',              // Optional: custom gRPC endpoint
   network: 'mainnet',         // Optional: 'mainnet' | 'testnet' | 'devnet'
-  registryUrl: 'https://suimpp.dev/api/report', // Optional: report payments to suimpp.dev
+  onPayment: (report) => {/* … */}, // Optional: emit on-chain context for analytics
 });
 ```
 

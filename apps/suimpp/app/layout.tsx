@@ -1,48 +1,34 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Instrument_Serif, Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-mono',
-  subsets: ['latin'],
-});
-
-const instrumentSerif = Instrument_Serif({
-  variable: '--font-instrument-serif',
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-});
-
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-});
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#000000',
+};
 
 export const metadata: Metadata = {
-  title: 'suimpp — Machine Payments on Sui',
+  title: 'suimpp — Machine Payments Protocol on Sui',
   description:
-    'The open protocol for AI agents to pay for APIs with USDC on Sui. Browse servers, explore payments, build integrations.',
+    'An open standard for agent-to-service payments. 402 Payment Required, settled in USDC on Sui. The protocol, the reference packages, the live implementations.',
   metadataBase: new URL('https://suimpp.dev'),
   openGraph: {
-    title: 'suimpp — Machine Payments on Sui',
+    title: 'suimpp — Machine Payments Protocol on Sui',
     description:
-      'The open protocol for AI agents to pay for APIs with USDC on Sui.',
+      'An open standard for agent-to-service payments. Settled in USDC on Sui. No keys, no accounts, no subscriptions.',
     url: 'https://suimpp.dev',
     siteName: 'suimpp',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    site: '@t2000ai',
-    title: 'suimpp — Machine Payments on Sui',
+    site: '@t2000_ai',
+    title: 'suimpp — Machine Payments Protocol on Sui',
     description:
-      'The open protocol for AI agents to pay for APIs with USDC on Sui.',
+      'An open standard for agent-to-service payments. Settled in USDC on Sui.',
   },
 };
 
@@ -52,7 +38,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

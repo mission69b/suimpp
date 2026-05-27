@@ -1,26 +1,22 @@
-import { Nav } from '../components/Nav';
-import { Footer } from '../components/Footer';
-import { DocsContent } from './DocsContent';
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
+import { SuimppNav } from "../components/site/SuimppNav";
+import { SuimppFooter } from "../components/site/SuimppFooter";
+import { DocsContent } from "./DocsContent";
 
 export const metadata: Metadata = {
-  title: 'Docs — suimpp',
+  title: "Docs — suimpp",
   description:
-    'Developer guide for Sui MPP. Pay for APIs with USDC or accept payments on your server.',
+    "Quickstart for @suimpp/mpp and @suimpp/discovery. Install, accept payments, make payments, validate, report.",
 };
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Nav />
-
-      <main className="flex-1 px-6 py-12">
-        <div className="max-w-3xl mx-auto">
-          <DocsContent />
-        </div>
+    <>
+      <SuimppNav currentPage="docs" />
+      <main>
+        <DocsContent />
       </main>
-
-      <Footer />
-    </div>
+      <SuimppFooter />
+    </>
   );
 }
