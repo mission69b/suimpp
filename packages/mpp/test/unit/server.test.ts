@@ -141,6 +141,29 @@ describe('server verify', () => {
     expect(result.status).toBe('success');
   });
 
+  it('threads a client to signature verification so zkLogin proofs verify', async () => {
+    mockGetTransaction.mockResolvedValue(buildMockTx());
+
+    const serverMethod = suiFn({
+      currency: USDC,
+      recipient: RECIPIENT,
+      store: new InMemoryDigestStore(),
+    });
+
+    await verifyPayment(serverMethod);
+
+    // zkLogin signatures only verify when a client is passed (Ed25519 ignores
+    // it). Regression guard for the silent "Invalid payment proof signature"
+    // failure that hit every zkLogin payment when the client was omitted.
+    expect(mockVerifyPersonalMessageSignature).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        client: expect.objectContaining({ core: expect.anything() }),
+      }),
+    );
+  });
+
   it('rejects failed transaction', async () => {
     mockGetTransaction.mockResolvedValue(buildMockTx({ success: false }));
 

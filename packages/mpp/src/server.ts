@@ -136,14 +136,21 @@ export function sui(options: SuiServerOptions) {
         );
       }
 
+      // Pass the client so zkLogin payment proofs verify. zkLogin signatures
+      // (e.g. Audric's browser wallet) can only be verified with a client to
+      // resolve the proof against the current epoch/JWK; Ed25519/Secp proofs
+      // (e.g. a local keypair) ignore it. Without it, every zkLogin payment
+      // fails closed as "Invalid payment proof signature". The original cause
+      // is preserved for gateway-side debugging.
       const publicKey = await verifyPersonalMessageSignature(
         createSuiPaymentProofBytes({
           challenge: credential.challenge,
           digest,
         }),
         credential.payload.signature,
-      ).catch(() => {
-        throw new Error('Invalid payment proof signature');
+        { client },
+      ).catch((cause) => {
+        throw new Error('Invalid payment proof signature', { cause });
       });
       const sender = resolved.transaction?.sender;
       if (!sender) {
