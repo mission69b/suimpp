@@ -1,0 +1,471 @@
+import type { ClientWithCoreApi } from '@mysten/sui/client';
+import type { Signer } from '@mysten/sui/cryptography';
+import { Transaction } from '@mysten/sui/transactions';
+import {
+  fromBase64,
+  normalizeSuiAddress,
+  toBase64,
+  toHex,
+} from '@mysten/sui/utils';
+import type { Currency } from './constants.js';
+import type { DigestStore, PaymentReport } from './server.js';
+import { parseAmountToRaw, withRetry } from './utils.js';
+
+// ---------------------------------------------------------------------------
+// x402 dialect for the suimpp rail — scheme `exact` on network `sui:*`.
+//
+// Canonical design doc: t2000-internal `spec/active/SUIMPP_X402_SCHEME.md`
+// (v0.3, APPROVED). The settlement rail is identical to the legacy digest
+// dialect — a gasless stablecoin transfer (`0x2::balance::send_funds`,
+// gasPrice = 0, no gas payment, protocol-level gasless). The ONLY change is
+// choreography: the client SIGNS but does not submit; the server (gateway /
+// facilitator) submits at serve time. This makes no-charge-on-failure
+// structural and clients sign-only.
+//
+// Replay binding (on-chain): the stateless address-balance form requires
+// `ValidDuring { minEpoch, maxEpoch, chain, nonce }` expiration — we derive
+// the nonce from the challenge id, which cryptographically binds the signed
+// payment to the specific 402 challenge and guarantees two same-amount
+// payments in the same epoch produce distinct digests. The nonce carries
+// UNIQUENESS, not secrecy (challenge ids are already unguessable HMAC
+// outputs); replay safety = challenge-once + digest-once + the 1-epoch
+// window, enforced server-side.
+// ---------------------------------------------------------------------------
+
+export const X402_SCHEME = 'exact' as const;
+export const X402_VERSION = 1 as const;
+/** Request header carrying the signed payment (x402 standard). */
+export const X402_PAYMENT_HEADER = 'X-PAYMENT';
+/** Response header carrying the settlement result (x402 standard). */
+export const X402_PAYMENT_RESPONSE_HEADER = 'X-PAYMENT-RESPONSE';
+
+const SEND_FUNDS_TARGETS = new Set([
+  '0x2::balance::send_funds',
+  '0x2::coin::send_funds',
+]);
+/** Every Move call permitted in a payment PTB (the gasless allowlist trio). */
+const ALLOWED_TARGETS = new Set([
+  ...SEND_FUNDS_TARGETS,
+  '0x2::balance::redeem_funds',
+  '0x2::coin::redeem_funds',
+  '0x2::balance::withdrawal_split',
+  '0x2::coin::into_balance',
+]);
+
+export type X402Network =
+  `sui:${'mainnet' | 'testnet' | 'devnet' | 'localnet'}`;
+
+export interface X402Requirements {
+  scheme: typeof X402_SCHEME;
+  network: X402Network;
+  /** Full Sui coin type of the payment asset. */
+  asset: string;
+  /** Atomic units (e.g. USDC 6dp) as a decimal string. */
+  maxAmountRequired: string;
+  payTo: string;
+  resource: string;
+  maxTimeoutSeconds: number;
+  extra: {
+    suimpp: {
+      /** The mppx challenge id this payment must bind to (single-use). */
+      challengeId: string;
+      /** u32 derived from challengeId — goes into ValidDuring.nonce. */
+      nonce: number;
+      /** Chain identifier string for ValidDuring (genesis digest). */
+      chain: string;
+      minEpoch: string;
+      maxEpoch: string;
+    };
+  };
+}
+
+export interface X402PaymentPayload {
+  x402Version: typeof X402_VERSION;
+  scheme: typeof X402_SCHEME;
+  network: X402Network;
+  payload: {
+    senderAddress: string;
+    /** base64 BCS TransactionData — fully signed-ready bytes. */
+    txBytes: string;
+    /** Sender signature over txBytes (Ed25519 / secp / zkLogin). */
+    senderSignature: string;
+    challengeId: string;
+  };
+}
+
+export interface X402SettleResponse {
+  success: boolean;
+  network: X402Network;
+  /** Settled transaction digest. */
+  transaction: string;
+  payer: string;
+}
+
+/**
+ * Derive the ValidDuring nonce (u32) from a challenge id. FNV-1a 32-bit —
+ * dependency-free and browser-safe. The nonce provides per-challenge
+ * UNIQUENESS (distinct digests for otherwise-identical payments); it is not
+ * a secret and carries no security on its own.
+ */
+export function challengeNonce(challengeId: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < challengeId.length; i++) {
+    hash ^= challengeId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+export function x402Network(
+  network: 'mainnet' | 'testnet' | 'devnet' | 'localnet',
+): X402Network {
+  return `sui:${network}`;
+}
+
+// ---------------------------------------------------------------------------
+// Server half — build the `accepts[]` entry for a 402 response
+// ---------------------------------------------------------------------------
+
+export interface CreateRequirementsOptions {
+  challengeId: string;
+  /** Human-units amount string from the challenge (e.g. "0.02"). */
+  amount: string;
+  currency: Currency;
+  recipient: string;
+  resource: string;
+  network: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
+  /** Chain identifier string (genesis digest) for ValidDuring. */
+  chain: string;
+  /** Current epoch — requirements are valid for [epoch, epoch + 1]. */
+  currentEpoch: bigint | number | string;
+  maxTimeoutSeconds?: number;
+}
+
+export function createX402Requirements(
+  options: CreateRequirementsOptions,
+): X402Requirements {
+  const amountRaw = parseAmountToRaw(options.amount, options.currency.decimals);
+  const minEpoch = BigInt(options.currentEpoch);
+  return {
+    scheme: X402_SCHEME,
+    network: x402Network(options.network),
+    asset: options.currency.type,
+    maxAmountRequired: amountRaw.toString(),
+    payTo: options.recipient,
+    resource: options.resource,
+    maxTimeoutSeconds: options.maxTimeoutSeconds ?? 60,
+    extra: {
+      suimpp: {
+        challengeId: options.challengeId,
+        nonce: challengeNonce(options.challengeId),
+        chain: options.chain,
+        minEpoch: minEpoch.toString(),
+        maxEpoch: (minEpoch + 1n).toString(),
+      },
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Client half — build + sign the payment WITHOUT submitting
+// ---------------------------------------------------------------------------
+
+export interface BuildSignedPaymentOptions {
+  requirements: X402Requirements;
+  signer: Signer;
+  /**
+   * Optional client for build-time resolution. The canonical stateless
+   * shape (address-balance withdrawal → redeem_funds → send_funds) has no
+   * object inputs, so the build is offline when omitted.
+   */
+  client?: ClientWithCoreApi;
+}
+
+/**
+ * Build the canonical stateless payment transaction, sign it, and return the
+ * `X-PAYMENT` header value + parsed payload. Never submits — settlement is
+ * the server's job (`settleX402Payment`).
+ */
+export async function buildX402SignedPayment(
+  options: BuildSignedPaymentOptions,
+): Promise<{ header: string; payment: X402PaymentPayload }> {
+  const { requirements, signer } = options;
+  const { suimpp } = requirements.extra;
+  const sender = signer.toSuiAddress();
+  const amountRaw = BigInt(requirements.maxAmountRequired);
+
+  const tx = new Transaction();
+  tx.setSender(sender);
+
+  const [balance] = tx.moveCall({
+    target: '0x2::balance::redeem_funds',
+    typeArguments: [requirements.asset],
+    arguments: [tx.withdrawal({ amount: amountRaw, type: requirements.asset })],
+  });
+  tx.moveCall({
+    target: '0x2::balance::send_funds',
+    typeArguments: [requirements.asset],
+    arguments: [balance, tx.pure.address(requirements.payTo)],
+  });
+
+  // Gasless stablecoin transfer: empty gas payment + zero price/budget.
+  tx.setGasPrice(0);
+  tx.setGasBudget(0);
+  tx.setGasPayment([]);
+  tx.setExpiration({
+    ValidDuring: {
+      minEpoch: suimpp.minEpoch,
+      maxEpoch: suimpp.maxEpoch,
+      minTimestamp: null,
+      maxTimestamp: null,
+      chain: suimpp.chain,
+      nonce: suimpp.nonce,
+    },
+  });
+
+  const bytes = options.client
+    ? await tx.build({ client: options.client })
+    : await tx.build();
+  const { signature } = await signer.signTransaction(bytes);
+
+  const payment: X402PaymentPayload = {
+    x402Version: X402_VERSION,
+    scheme: X402_SCHEME,
+    network: requirements.network,
+    payload: {
+      senderAddress: sender,
+      txBytes: toBase64(bytes),
+      senderSignature: signature,
+      challengeId: suimpp.challengeId,
+    },
+  };
+  return { header: encodeX402Header(payment), payment };
+}
+
+export function encodeX402Header(payment: X402PaymentPayload): string {
+  return toBase64(new TextEncoder().encode(JSON.stringify(payment)));
+}
+
+export function parseX402Header(headerValue: string): X402PaymentPayload {
+  let parsed: X402PaymentPayload;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(fromBase64(headerValue)));
+  } catch {
+    throw new Error('[suimpp/x402] X-PAYMENT header is not base64 JSON');
+  }
+  if (parsed.scheme !== X402_SCHEME) {
+    throw new Error(`[suimpp/x402] Unsupported scheme: ${parsed.scheme}`);
+  }
+  const p = parsed.payload;
+  if (
+    !p?.txBytes ||
+    !p?.senderSignature ||
+    !p?.challengeId ||
+    !p?.senderAddress
+  ) {
+    throw new Error('[suimpp/x402] X-PAYMENT payload missing required fields');
+  }
+  return parsed;
+}
+
+// ---------------------------------------------------------------------------
+// Server half — verify (pre-settle, structural) + settle (submit + confirm)
+// ---------------------------------------------------------------------------
+
+export interface VerifyX402Options {
+  payment: X402PaymentPayload;
+  /** The terms this payment must match (from the original challenge). */
+  expected: {
+    challengeId: string;
+    amount: string;
+    currency: Currency;
+    recipient: string;
+    network: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
+  };
+}
+
+/**
+ * Structural pre-settle verification: the signed bytes must be the canonical
+ * gasless payment for OUR terms before we relay them. Catches wrong-terms /
+ * relay-abuse payloads without an RPC call. Post-settle balance-change
+ * enforcement in `settleX402Payment` is the backstop.
+ */
+export function verifyX402Payment(options: VerifyX402Options): {
+  txBytes: Uint8Array;
+  nonce: number;
+} {
+  const { payment, expected } = options;
+
+  if (payment.network !== x402Network(expected.network)) {
+    throw new Error(`[suimpp/x402] Network mismatch: ${payment.network}`);
+  }
+  if (payment.payload.challengeId !== expected.challengeId) {
+    throw new Error('[suimpp/x402] Payment is bound to a different challenge');
+  }
+
+  const txBytes = fromBase64(payment.payload.txBytes);
+  const tx = Transaction.from(txBytes);
+  const data = tx.getData();
+
+  if (
+    !data.sender ||
+    normalizeSuiAddress(data.sender) !==
+      normalizeSuiAddress(payment.payload.senderAddress)
+  ) {
+    throw new Error('[suimpp/x402] Transaction sender mismatch');
+  }
+
+  // Gasless shape: zero price, no gas payment objects.
+  const gas = data.gasData;
+  if (BigInt(gas.price ?? 1) !== 0n || (gas.payment?.length ?? 0) > 0) {
+    throw new Error('[suimpp/x402] Transaction is not a gasless transfer');
+  }
+
+  // ValidDuring nonce = the on-chain challenge binding.
+  const expiration = data.expiration;
+  const validDuring =
+    expiration && 'ValidDuring' in expiration ? expiration.ValidDuring : null;
+  if (!validDuring) {
+    throw new Error(
+      '[suimpp/x402] Transaction must use ValidDuring expiration',
+    );
+  }
+  const expectedNonce = challengeNonce(expected.challengeId);
+  if (Number(validDuring.nonce) !== expectedNonce) {
+    throw new Error(
+      '[suimpp/x402] ValidDuring nonce does not bind to the challenge',
+    );
+  }
+
+  // Command allowlist: only the gasless transfer trio may appear, and at
+  // least one send_funds must pay the expected recipient.
+  const normalizedRecipient = normalizeSuiAddress(expected.recipient);
+  let paysRecipient = false;
+  for (const command of data.commands) {
+    if (!('MoveCall' in command) || !command.MoveCall) {
+      throw new Error('[suimpp/x402] Only MoveCall commands are permitted');
+    }
+    const call = command.MoveCall;
+    const target = `${normalizeSuiAddress(call.package)}::${call.module}::${call.function}`;
+    const shortTarget = `0x2::${call.module}::${call.function}`;
+    if (
+      !ALLOWED_TARGETS.has(shortTarget) ||
+      !target.endsWith(`::${call.module}::${call.function}`)
+    ) {
+      throw new Error(`[suimpp/x402] Disallowed Move call: ${shortTarget}`);
+    }
+    if (SEND_FUNDS_TARGETS.has(shortTarget)) {
+      const recipientArg = call.arguments[call.arguments.length - 1];
+      if (
+        recipientArg &&
+        typeof recipientArg === 'object' &&
+        'Input' in recipientArg
+      ) {
+        const input = data.inputs[recipientArg.Input as number];
+        if (input && 'Pure' in input && input.Pure?.bytes) {
+          const addr = `0x${toHex(fromBase64(input.Pure.bytes))}`;
+          if (normalizeSuiAddress(addr) === normalizedRecipient) {
+            paysRecipient = true;
+          }
+        }
+      }
+    }
+  }
+  if (!paysRecipient) {
+    throw new Error(
+      '[suimpp/x402] Transaction does not pay the expected recipient',
+    );
+  }
+
+  return { txBytes, nonce: expectedNonce };
+}
+
+export interface SettleX402Options {
+  payment: X402PaymentPayload;
+  client: ClientWithCoreApi;
+  /** Digest replay store — shared with the legacy dialect. */
+  store: DigestStore;
+  expected: VerifyX402Options['expected'];
+  onPayment?: (report: PaymentReport) => void;
+}
+
+/**
+ * Settle-then-serve: verify structurally, submit the client-signed bytes,
+ * confirm the on-chain balance change, record the digest. Throws (and the
+ * host returns 402) without serving if anything fails — and because the
+ * host only calls the upstream AFTER this resolves, a failed upstream can
+ * void/refund before any service value is lost.
+ */
+export async function settleX402Payment(
+  options: SettleX402Options,
+): Promise<X402SettleResponse> {
+  const { payment, client, store, expected } = options;
+  const { txBytes } = verifyX402Payment({ payment, expected });
+
+  const result = await withRetry(
+    () =>
+      client.core.executeTransaction({
+        transaction: txBytes,
+        signatures: [payment.payload.senderSignature],
+        include: { balanceChanges: true, transaction: true },
+      }),
+    { attempts: 3, baseDelayMs: 500 },
+  );
+
+  const resolved = result.Transaction ?? result.FailedTransaction;
+  if (!resolved?.status.success) {
+    throw new Error(
+      `[suimpp/x402] Settlement failed on-chain: ${
+        resolved?.status.error?.message ?? 'unknown'
+      }`,
+    );
+  }
+
+  const digest = resolved.digest;
+  if (await store.has(digest)) {
+    throw new Error(`[suimpp/x402] Digest already used: ${digest}`);
+  }
+
+  // Post-settle enforcement (same checks as the legacy dialect).
+  const normalizedRecipient = normalizeSuiAddress(expected.recipient);
+  const paid = resolved.balanceChanges.find(
+    (bc) =>
+      bc.coinType === expected.currency.type &&
+      normalizeSuiAddress(bc.address) === normalizedRecipient &&
+      BigInt(bc.amount) > 0n,
+  );
+  const requestedRaw = parseAmountToRaw(
+    expected.amount,
+    expected.currency.decimals,
+  );
+  if (!paid || BigInt(paid.amount) < requestedRaw) {
+    throw new Error('[suimpp/x402] Settled amount does not satisfy the terms');
+  }
+
+  await store.set(digest);
+
+  const report: PaymentReport = {
+    digest,
+    sender: payment.payload.senderAddress,
+    recipient: expected.recipient,
+    amount: expected.amount,
+    currency: expected.currency.type,
+    network: expected.network,
+  };
+  if (options.onPayment) {
+    try {
+      options.onPayment(report);
+    } catch {}
+  }
+
+  return {
+    success: true,
+    network: payment.network,
+    transaction: digest,
+    payer: payment.payload.senderAddress,
+  };
+}
+
+export function encodeX402Response(response: X402SettleResponse): string {
+  return toBase64(new TextEncoder().encode(JSON.stringify(response)));
+}

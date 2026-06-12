@@ -236,3 +236,23 @@ pnpm --filter @suimpp/mpp typecheck
 ## License
 
 MIT — see [LICENSE](https://github.com/mission69b/suimpp/blob/main/LICENSE)
+
+## x402 dialect (`@suimpp/mpp/x402`)
+
+Scheme `exact` on network `sui:mainnet` — the x402-native dialect over the same
+gasless rail. The client **signs but does not submit** (stateless
+address-balance form: `withdrawal → redeem_funds → send_funds`, `ValidDuring`
+nonce bound to the challenge); the server verifies the signed bytes and
+**settles at serve time** — no charge on failure, structurally.
+
+```ts
+// Server: emit accepts[] on 402 + settle on X-PAYMENT
+import { createX402Requirements, parseX402Header, settleX402Payment } from '@suimpp/mpp/x402';
+
+// Client: sign-only payment
+import { buildX402SignedPayment } from '@suimpp/mpp/x402';
+const { header } = await buildX402SignedPayment({ requirements, signer });
+// retry the request with `X-PAYMENT: <header>`
+```
+
+The legacy digest dialect (above) is unchanged and continues to work.

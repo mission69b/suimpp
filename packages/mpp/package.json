@@ -1,6 +1,6 @@
 {
   "name": "@suimpp/mpp",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Sui USDC payment method for the Machine Payments Protocol (MPP)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -21,12 +21,14 @@
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
       "require": "./dist/server.cjs"
+    },
+    "./x402": {
+      "types": "./dist/x402.d.ts",
+      "import": "./dist/x402.js",
+      "require": "./dist/x402.cjs"
     }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "keywords": [
     "mpp",
     "sui",
