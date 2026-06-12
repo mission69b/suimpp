@@ -1,4 +1,6 @@
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { Transaction } from '@mysten/sui/transactions';
+import { toBase64 } from '@mysten/sui/utils';
 import { describe, expect, it, vi } from 'vitest';
 import { USDC } from '../../src/constants.js';
 import {
@@ -113,6 +115,59 @@ describe('buildX402SignedPayment + verifyX402Payment (round-trip)', () => {
     expect(() => verifyX402Payment({ payment, expected: EXPECTED })).toThrow(
       /nonce does not bind/,
     );
+  });
+
+  it('rejects a non-framework package masquerading as 0x2 (package-spoof)', async () => {
+    const signer = new Ed25519Keypair();
+    const { payment } = await buildX402SignedPayment({
+      requirements: makeRequirements(),
+      signer,
+    });
+    // Forge a tx that calls send_funds on a MALICIOUS package, signed for
+    // our challenge/terms. The structural check must reject on the package,
+    // not be fooled by the matching module::function.
+    const evil = `0x${'e'.repeat(64)}`;
+    const tx = new Transaction();
+    tx.setSender(signer.toSuiAddress());
+    const [bal] = tx.moveCall({
+      target: `${evil}::balance::redeem_funds`,
+      typeArguments: [USDC.type],
+      arguments: [tx.withdrawal({ amount: 20000n, type: USDC.type })],
+    });
+    tx.moveCall({
+      target: `${evil}::balance::send_funds`,
+      typeArguments: [USDC.type],
+      arguments: [bal, tx.pure.address(RECIPIENT)],
+    });
+    tx.setGasPrice(0);
+    tx.setGasBudget(0);
+    tx.setGasPayment([]);
+    tx.setExpiration({
+      ValidDuring: {
+        minEpoch: '100',
+        maxEpoch: '101',
+        minTimestamp: null,
+        maxTimestamp: null,
+        chain: CHAIN,
+        nonce: challengeNonce('test-challenge-id'),
+      },
+    });
+    const bytes = await tx.build();
+    const { signature } = await signer.signTransaction(bytes);
+    const forged: X402PaymentPayload = {
+      x402Version: 1,
+      scheme: 'exact',
+      network: 'sui:mainnet',
+      payload: {
+        senderAddress: signer.toSuiAddress(),
+        txBytes: toBase64(bytes),
+        senderSignature: signature,
+        challengeId: 'test-challenge-id',
+      },
+    };
+    expect(() =>
+      verifyX402Payment({ payment: forged, expected: EXPECTED }),
+    ).toThrow(/Non-framework package/);
   });
 
   it('rejects a payment to the wrong recipient', async () => {

@@ -39,17 +39,17 @@ export const X402_PAYMENT_HEADER = 'X-PAYMENT';
 /** Response header carrying the settlement result (x402 standard). */
 export const X402_PAYMENT_RESPONSE_HEADER = 'X-PAYMENT-RESPONSE';
 
-const SEND_FUNDS_TARGETS = new Set([
-  '0x2::balance::send_funds',
-  '0x2::coin::send_funds',
-]);
-/** Every Move call permitted in a payment PTB (the gasless allowlist trio). */
-const ALLOWED_TARGETS = new Set([
-  ...SEND_FUNDS_TARGETS,
-  '0x2::balance::redeem_funds',
-  '0x2::coin::redeem_funds',
-  '0x2::balance::withdrawal_split',
-  '0x2::coin::into_balance',
+/** The Sui framework package — the ONLY package a payment PTB may call. */
+const FRAMEWORK_PACKAGE = normalizeSuiAddress('0x2');
+/** `module::function` pairs that move funds to the recipient. */
+const SEND_FUNDS_FNS = new Set(['balance::send_funds', 'coin::send_funds']);
+/** Every `module::function` permitted in a payment PTB (the gasless trio). */
+const ALLOWED_FNS = new Set([
+  ...SEND_FUNDS_FNS,
+  'balance::redeem_funds',
+  'coin::redeem_funds',
+  'balance::withdrawal_split',
+  'coin::into_balance',
 ]);
 
 export type X402Network =
@@ -287,8 +287,14 @@ export interface VerifyX402Options {
 /**
  * Structural pre-settle verification: the signed bytes must be the canonical
  * gasless payment for OUR terms before we relay them. Catches wrong-terms /
- * relay-abuse payloads without an RPC call. Post-settle balance-change
- * enforcement in `settleX402Payment` is the backstop.
+ * relay-abuse payloads without an RPC call.
+ *
+ * SCOPE (Phase 1): this is a STRUCTURAL check — it does NOT verify
+ * `senderSignature`. Signature authority is the chain at `settleX402Payment`
+ * (a bad signature fails `executeTransaction`, and under settle-then-serve
+ * the upstream is never called), plus the post-settle balance-change check.
+ * A standalone Phase-3 public `/verify` endpoint adds an explicit async
+ * signature check (needs a client for zkLogin) on top of this.
  */
 export function verifyX402Payment(options: VerifyX402Options): {
   txBytes: Uint8Array;
@@ -337,8 +343,10 @@ export function verifyX402Payment(options: VerifyX402Options): {
     );
   }
 
-  // Command allowlist: only the gasless transfer trio may appear, and at
-  // least one send_funds must pay the expected recipient.
+  // Command allowlist: only the gasless transfer trio on the FRAMEWORK
+  // package (0x2) may appear, and at least one send_funds must pay the
+  // expected recipient. The package check is load-bearing — a malicious
+  // `0xEVIL::balance::send_funds` must NOT pass as `0x2::balance::send_funds`.
   const normalizedRecipient = normalizeSuiAddress(expected.recipient);
   let paysRecipient = false;
   for (const command of data.commands) {
@@ -346,15 +354,16 @@ export function verifyX402Payment(options: VerifyX402Options): {
       throw new Error('[suimpp/x402] Only MoveCall commands are permitted');
     }
     const call = command.MoveCall;
-    const target = `${normalizeSuiAddress(call.package)}::${call.module}::${call.function}`;
-    const shortTarget = `0x2::${call.module}::${call.function}`;
-    if (
-      !ALLOWED_TARGETS.has(shortTarget) ||
-      !target.endsWith(`::${call.module}::${call.function}`)
-    ) {
-      throw new Error(`[suimpp/x402] Disallowed Move call: ${shortTarget}`);
+    const fn = `${call.module}::${call.function}`;
+    if (normalizeSuiAddress(call.package) !== FRAMEWORK_PACKAGE) {
+      throw new Error(
+        `[suimpp/x402] Non-framework package call: ${call.package}::${fn}`,
+      );
     }
-    if (SEND_FUNDS_TARGETS.has(shortTarget)) {
+    if (!ALLOWED_FNS.has(fn)) {
+      throw new Error(`[suimpp/x402] Disallowed Move call: 0x2::${fn}`);
+    }
+    if (SEND_FUNDS_FNS.has(fn)) {
       const recipientArg = call.arguments[call.arguments.length - 1];
       if (
         recipientArg &&
