@@ -1,10 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@import "@t2000/ui/tokens";
-@import "@t2000/ui/tokens/page";
-@import "@t2000/ui/tokens/responsive";
-@import "@t2000/ui/tokens/theme";
+/* Design tokens + marketing chrome — owned locally (copied from the former
+   @t2000/ui package; canonical values in t2000's design-tokens/tokens.css). */
+@import "./styles/geist-ds.css";
+@import "./styles/page.css";
+@import "./styles/responsive.css";
+@import "./styles/theme.css";
 
 /* ============================================================
    suimpp.dev — protocol site overrides
@@ -22,6 +24,11 @@
   --su-reading-max: 720px;
   --su-toc-width:   220px;
   --su-page-pad:    32px;
+
+  /* House dark theme — seamless near-black + hairline borders, consistent
+     with the rest of the t2000 family (design-tokens/tokens.css). */
+  --ds-background-100: #08090a;
+  --ds-gray-alpha-400: rgba(255, 255, 255, 0.08);
 }
 
 ::selection { background: var(--t2k-accent); color: white; }

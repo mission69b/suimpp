@@ -9,7 +9,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@t2000/ui": "^0.1.2",
     "geist": "^1.7.1",
     "next": "^15",
     "react": "^19",
