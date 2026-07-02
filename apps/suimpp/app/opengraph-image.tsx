@@ -63,7 +63,7 @@ export default async function Image() {
         style={{
           width: '100%',
           height: '100%',
-          background: '#0A0A0A',
+          background: '#151515',
           position: 'relative',
           display: 'flex',
           fontFamily: 'Geist',
@@ -76,7 +76,7 @@ export default async function Image() {
             top: 16,
             right: 16,
             bottom: 16,
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: '1px solid #262626',
           }}
         />
 
