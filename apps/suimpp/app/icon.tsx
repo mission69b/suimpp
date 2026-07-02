@@ -45,7 +45,7 @@ export default async function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#151515',
+          background: '#0A0A0A',
           color: '#EDEDED',
           fontSize: 24,
           fontWeight: 600,
