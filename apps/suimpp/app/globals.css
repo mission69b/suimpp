@@ -25,11 +25,10 @@
   --su-toc-width:   220px;
   --su-page-pad:    32px;
 
-  /* House dark theme — Audric's dark palette (family decision 2026-07-02;
-     exact sRGB of audric web-v3's .dark oklch values — see t2000's
-     design-tokens/tokens.css). */
-  --ds-background-100: #151515;
-  --ds-gray-alpha-400: #262626;
+  /* House dark theme — seamless near-black + hairline borders, consistent
+     with the rest of the t2000 family (design-tokens/tokens.css). */
+  --ds-background-100: #08090a;
+  --ds-gray-alpha-400: rgba(255, 255, 255, 0.08);
 }
 
 ::selection { background: var(--t2k-accent); color: white; }
