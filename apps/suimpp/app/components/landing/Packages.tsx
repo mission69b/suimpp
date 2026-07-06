@@ -2,7 +2,7 @@ const PKGS = [
   {
     name: "@suimpp/mpp",
     ver: "npm",
-    desc: "Sui USDC payment method for MPP. Client and server.",
+    desc: "Sui USDC payment method for x402. Client and server.",
     install: "npm install @suimpp/mpp mppx",
     href: "https://www.npmjs.com/package/@suimpp/mpp",
   },

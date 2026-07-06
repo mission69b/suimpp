@@ -1,40 +1,40 @@
 export function GET() {
-  const content = `# suimpp.dev — Machine Payments Protocol on Sui
+  const content = `# suimpp.dev — the Sui scheme for x402
 
-> An open standard for agent-to-service payments. Settled in USDC on Sui.
+> An open standard for agent-to-service payments. Settled in USDC on Sui, gasless.
 
-## What is MPP on Sui?
+## What is suimpp?
 
-The Machine Payments Protocol (MPP) is an open standard by Stripe and Tempo Labs for autonomous agent-to-service payments over HTTP. The Sui binding (suimpp) defines how MPP challenges are settled on Sui using USDC.
+suimpp is the Sui binding for x402-style agent payments over HTTP: standard scheme \`exact\` on network \`sui:mainnet\`. When a server answers 402, the client signs a gasless USDC payment and retries — no keys, no accounts, no subscriptions.
 
 ## How it works
 
-1. Agent sends a request to an MPP-enabled API
-2. Server returns 402 Payment Required with a WWW-Authenticate: Payment header
-3. Agent settles the payment in USDC on Sui (sub-second finality, gasless via sponsored transactions)
-4. Agent retries with an Authorization: Payment header carrying the digest + grief-protection signature
-5. Server verifies the on-chain payment and returns the API response
+1. Agent sends a request to a paid API
+2. Server returns 402 Payment Required with x402 payment terms (accepts[])
+3. Agent signs a gasless USDC authorization (SIP-58 address-balance withdrawal shape) and retries with the X-PAYMENT header
+4. Gateway verifies + submits the payment on Sui (settle-then-serve; sub-second finality)
+5. Server returns the API response with the settle receipt in X-PAYMENT-RESPONSE
 
 ## Packages
 
-- \`@suimpp/mpp\` — Sui USDC payment method (client + server)
+- \`@suimpp/mpp\` — Sui USDC payment scheme (client + server)
   npm: https://www.npmjs.com/package/@suimpp/mpp
-- \`@suimpp/discovery\` — OpenAPI validation CLI for MPP servers
+- \`@suimpp/discovery\` — OpenAPI validation CLI for paid servers
   npm: https://www.npmjs.com/package/@suimpp/discovery
-- \`mppx\` — Framework-agnostic MPP protocol SDK
+- \`mppx\` — framework-agnostic protocol SDK
   npm: https://www.npmjs.com/package/mppx
 
 ## Pages
 
 - Home: https://suimpp.dev
-- v0.1 protocol spec: https://suimpp.dev/spec
+- Protocol spec: https://suimpp.dev/spec
 - Quickstart: https://suimpp.dev/docs
 
 ## Implementations
 
-- mpp.t2000.ai — a live MPP gateway (40 services, 88 endpoints)
-- @t2000/cli — the t2000 Agent Wallet, a CLI client that pays MPP endpoints
-- Audric (coming soon) — a conversational finance app paying MPP through the t2000 SDK
+- mpp.t2000.ai — a live x402 gateway (every major AI + data API)
+- @t2000/cli — the t2000 Agent Wallet, a CLI client that pays x402 endpoints
+- Audric (audric.ai) — private, decentralized AI paying over x402 through the t2000 SDK
 
 ## Source
 

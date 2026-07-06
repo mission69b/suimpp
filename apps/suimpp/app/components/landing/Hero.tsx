@@ -58,11 +58,17 @@ export function Hero() {
                 letterSpacing: "-0.011em",
               }}
             >
-              An open standard by{" "}
-              <ProtoLink href="https://stripe.com">Stripe</ProtoLink> and{" "}
-              <ProtoLink href="https://tempo.io">Tempo Labs</ProtoLink>. When a
-              server returns 402, the client pays in USDC and retries — no
-              keys, no accounts, no subscriptions. suimpp brings it to Sui.
+              When a server returns 402, the client pays in USDC and retries —
+              no keys, no accounts, no subscriptions. suimpp is the{" "}
+              <ProtoLink href="/spec">Sui scheme for x402</ProtoLink>: standard{" "}
+              <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.92em", color: "var(--fg)" }}>
+                exact
+              </code>{" "}
+              on network{" "}
+              <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.92em", color: "var(--fg)" }}>
+                sui:mainnet
+              </code>
+              , settled gasless.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-2.5">

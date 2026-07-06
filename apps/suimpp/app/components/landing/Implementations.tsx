@@ -2,22 +2,20 @@ const ITEMS = [
   {
     title: "mpp.t2000.ai",
     role: "GATEWAY",
-    desc: "A live MPP gateway. 40 services. 88 endpoints.",
+    desc: "A live x402 gateway — every major AI + data API, pay-per-request in USDC.",
     href: "https://mpp.t2000.ai",
   },
   {
     title: "@t2000/cli",
     role: "CLIENT",
-    desc: "The t2000 Agent Wallet — a CLI client that pays MPP endpoints.",
+    desc: "The t2000 Agent Wallet — a CLI client that pays x402 endpoints.",
     href: "https://t2000.ai/agent-wallet",
   },
   {
     title: "Audric",
     role: "CONSUMER",
-    desc:
-      "A conversational finance app — pays MPP through the t2000 SDK.",
+    desc: "Private, decentralized AI — pays over x402 through the t2000 SDK.",
     href: "https://audric.ai",
-    soon: true,
   },
 ];
 
@@ -110,22 +108,6 @@ export function Implementations() {
                   >
                     {it.title}
                   </span>
-                  {it.soon && (
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 9.5,
-                        color: "var(--fg-subtle)",
-                        letterSpacing: "0.08em",
-                        padding: "2px 7px",
-                        border: "1px solid var(--ds-gray-alpha-400)",
-                        borderRadius: 3,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Coming soon
-                    </span>
-                  )}
                 </div>
                 <div
                   className="mt-1"

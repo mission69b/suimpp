@@ -11,24 +11,26 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'suimpp — Machine Payments Protocol on Sui',
+  title: 'suimpp — the Sui scheme for x402',
   description:
     'An open standard for agent-to-service payments. 402 Payment Required, settled in USDC on Sui. The protocol, the reference packages, the live implementations.',
   metadataBase: new URL('https://suimpp.dev'),
   openGraph: {
-    title: 'suimpp — Machine Payments Protocol on Sui',
+    title: 'suimpp — the Sui scheme for x402',
     description:
       'An open standard for agent-to-service payments. Settled in USDC on Sui. No keys, no accounts, no subscriptions.',
     url: 'https://suimpp.dev',
     siteName: 'suimpp',
     type: 'website',
+    images: ['/og-suimpp.png'],
   },
   twitter: {
     card: 'summary_large_image',
     site: '@t2000ai',
-    title: 'suimpp — Machine Payments Protocol on Sui',
+    title: 'suimpp — the Sui scheme for x402',
     description:
       'An open standard for agent-to-service payments. Settled in USDC on Sui.',
+    images: ['/og-suimpp.png'],
   },
 };
 
