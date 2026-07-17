@@ -4,11 +4,17 @@ import { toBase64 } from '@mysten/sui/utils';
 import { describe, expect, it, vi } from 'vitest';
 import { USDC } from '../../src/constants.js';
 import {
+  type X402EscrowPaymentPayload,
   type X402PaymentPayload,
   buildX402SignedPayment,
   challengeNonce,
+  createX402EscrowRequirements,
   createX402Requirements,
+  encodeX402EscrowHeader,
   encodeX402Header,
+  isX402EscrowHeader,
+  isX402EscrowRequirements,
+  parseX402EscrowHeader,
   parseX402Header,
   settleX402Payment,
   verifyX402Payment,
@@ -207,6 +213,99 @@ describe('parseX402Header', () => {
       payload: { senderAddress: '0x1' },
     } as unknown as X402PaymentPayload);
     expect(() => parseX402Header(missing)).toThrow(/missing required fields/);
+  });
+});
+
+describe('escrow intent (job-class 402)', () => {
+  const TERMS = {
+    deliverWithinMs: 86_400_000,
+    reviewWindowMs: 3_600_000,
+    rejectSplitBps: 8000,
+    packageId: `0x${'a'.repeat(64)}`,
+  };
+
+  function makeEscrowRequirements() {
+    return createX402EscrowRequirements({
+      amount: '5',
+      currency: USDC,
+      recipient: RECIPIENT,
+      resource: 'https://seller.test/jobs/research-report',
+      network: 'mainnet',
+      terms: TERMS,
+    });
+  }
+
+  it('builds a job-class accepts[] entry with escrow terms, no challenge', () => {
+    const req = makeEscrowRequirements();
+    expect(req.scheme).toBe('exact');
+    expect(req.network).toBe('sui:mainnet');
+    expect(req.maxAmountRequired).toBe('5000000'); // 5 USDC @ 6dp
+    expect(req.payTo).toBe(RECIPIENT);
+    expect(req.extra.escrow).toEqual(TERMS);
+    expect((req.extra as Record<string, unknown>).suimpp).toBeUndefined();
+  });
+
+  it('isX402EscrowRequirements discriminates job-class vs instant entries', () => {
+    expect(isX402EscrowRequirements(makeEscrowRequirements())).toBe(true);
+    expect(isX402EscrowRequirements(makeRequirements())).toBe(false);
+    expect(isX402EscrowRequirements(null)).toBe(false);
+    expect(isX402EscrowRequirements({ extra: {} })).toBe(false);
+  });
+
+  it('escrow X-PAYMENT header round-trips the Job object id', () => {
+    const payment: X402EscrowPaymentPayload = {
+      x402Version: 1,
+      scheme: 'exact',
+      network: 'sui:mainnet',
+      payload: {
+        jobId: `0x${'d'.repeat(64)}`,
+        buyerAddress: `0x${'b'.repeat(64)}`,
+      },
+    };
+    const header = encodeX402EscrowHeader(payment);
+    expect(isX402EscrowHeader(header)).toBe(true);
+    const parsed = parseX402EscrowHeader(header);
+    expect(parsed.payload.jobId).toBe(payment.payload.jobId);
+    expect(parsed.payload.buyerAddress).toBe(payment.payload.buyerAddress);
+  });
+
+  it('rejects malformed escrow credentials', () => {
+    expect(() => parseX402EscrowHeader('garbage!!')).toThrow(/base64 JSON/);
+    const noJob = encodeX402EscrowHeader({
+      x402Version: 1,
+      scheme: 'exact',
+      network: 'sui:mainnet',
+      payload: { buyerAddress: '0x1' },
+    } as unknown as X402EscrowPaymentPayload);
+    expect(() => parseX402EscrowHeader(noJob)).toThrow(/missing jobId/);
+    const badId = encodeX402EscrowHeader({
+      x402Version: 1,
+      scheme: 'exact',
+      network: 'sui:mainnet',
+      payload: { jobId: 'not-an-id', buyerAddress: '0x1' },
+    } as unknown as X402EscrowPaymentPayload);
+    expect(() => parseX402EscrowHeader(badId)).toThrow(/Malformed Job/);
+  });
+
+  it('an instant X-PAYMENT is NOT an escrow header (and vice versa)', async () => {
+    const signer = new Ed25519Keypair();
+    const { header } = await buildX402SignedPayment({
+      requirements: makeRequirements(),
+      signer,
+    });
+    expect(isX402EscrowHeader(header)).toBe(false);
+    const escrowHeader = encodeX402EscrowHeader({
+      x402Version: 1,
+      scheme: 'exact',
+      network: 'sui:mainnet',
+      payload: {
+        jobId: `0x${'d'.repeat(64)}`,
+        buyerAddress: `0x${'b'.repeat(64)}`,
+      },
+    });
+    expect(() => parseX402Header(escrowHeader)).toThrow(
+      /missing required fields/,
+    );
   });
 });
 

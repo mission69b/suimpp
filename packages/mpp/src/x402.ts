@@ -79,6 +79,156 @@ export interface X402Requirements {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Escrow intent — the job-class extension (SPEC_A2A_ESCROW slice 2).
+//
+// Instant calls are settle-then-serve and need no escrow. Async deliverable
+// work (reports, builds, SLA jobs) commits funds BEFORE delivery starts, so
+// a job-class endpoint's 402 advertises escrow TERMS instead of a payment
+// challenge: the buyer creates+funds a shared `a2a_escrow::escrow::Job`
+// object on Sui (funds live in the object — no facilitator custody), then
+// presents the Job object id as the X-PAYMENT credential. The seller
+// verifies the object ON-CHAIN (funded, pays me, covers the price) before
+// starting work — chain-verified, so it works for every signer including
+// zkLogin. Settlement (deliver/release/reject/refund) happens on the object,
+// not through this rail.
+//
+// Semantics: an accepts[] entry carrying `extra.escrow` is JOB-CLASS — the
+// seller MUST refuse an instant signed-transfer X-PAYMENT against it, and
+// clients MUST NOT pay it instantly (route through the escrow flow, e.g.
+// `t2 job create`).
+// ---------------------------------------------------------------------------
+
+export interface X402EscrowTerms {
+  /** Time the seller commits to deliver within, in ms from job creation. */
+  deliverWithinMs: number;
+  /** Buyer's accept/reject window after delivery, in ms. Lapse = release. */
+  reviewWindowMs: number;
+  /** Buyer's share in basis points if they reject (0–10000). Fixed at job
+   *  creation — neither side can move the goalposts later. */
+  rejectSplitBps: number;
+  /** The escrow Move package the seller verifies jobs against
+   *  (`a2a_escrow::escrow` on the advertised network). */
+  packageId?: string;
+  /** Optional pointer (URL or short note) describing the expected job-spec
+   *  format the buyer should hash into the job's `spec_hash`. */
+  specSchema?: string;
+}
+
+/** A job-class `accepts[]` entry. Same base fields as the instant entry
+ *  (`maxAmountRequired` = the job price) but NO settlement challenge —
+ *  `extra.escrow` replaces `extra.suimpp`. */
+export interface X402EscrowRequirements {
+  scheme: typeof X402_SCHEME;
+  network: X402Network;
+  asset: string;
+  /** The job price in atomic units (decimal string). */
+  maxAmountRequired: string;
+  /** The seller wallet the Job must pay (and the claimed Agent ID wallet). */
+  payTo: string;
+  resource: string;
+  maxTimeoutSeconds: number;
+  extra: { escrow: X402EscrowTerms };
+}
+
+/** Discriminate a job-class entry inside a mixed accepts[] array. */
+export function isX402EscrowRequirements(
+  entry: unknown,
+): entry is X402EscrowRequirements {
+  return Boolean(
+    entry &&
+      typeof entry === 'object' &&
+      typeof (entry as X402EscrowRequirements).extra?.escrow
+        ?.deliverWithinMs === 'number',
+  );
+}
+
+export interface CreateEscrowRequirementsOptions {
+  /** Human-units job price string (e.g. "5" = 5 USDC). */
+  amount: string;
+  currency: Currency;
+  /** The seller wallet (payTo). */
+  recipient: string;
+  resource: string;
+  network: 'mainnet' | 'testnet' | 'devnet' | 'localnet';
+  terms: X402EscrowTerms;
+  maxTimeoutSeconds?: number;
+}
+
+/** Server half — build the job-class `accepts[]` entry for a 402 response. */
+export function createX402EscrowRequirements(
+  options: CreateEscrowRequirementsOptions,
+): X402EscrowRequirements {
+  const amountRaw = parseAmountToRaw(options.amount, options.currency.decimals);
+  return {
+    scheme: X402_SCHEME,
+    network: x402Network(options.network),
+    asset: options.currency.type,
+    maxAmountRequired: amountRaw.toString(),
+    payTo: options.recipient,
+    resource: options.resource,
+    maxTimeoutSeconds: options.maxTimeoutSeconds ?? 60,
+    extra: { escrow: options.terms },
+  };
+}
+
+/** The escrow X-PAYMENT credential — carries the funded Job object id
+ *  instead of signed transfer bytes. The seller verifies the object
+ *  on-chain before starting work. */
+export interface X402EscrowPaymentPayload {
+  x402Version: typeof X402_VERSION;
+  scheme: typeof X402_SCHEME;
+  network: X402Network;
+  payload: {
+    /** The shared `a2a_escrow::escrow::Job` object id (0x…). */
+    jobId: string;
+    buyerAddress: string;
+  };
+}
+
+export function encodeX402EscrowHeader(
+  payment: X402EscrowPaymentPayload,
+): string {
+  return toBase64(new TextEncoder().encode(JSON.stringify(payment)));
+}
+
+export function parseX402EscrowHeader(
+  headerValue: string,
+): X402EscrowPaymentPayload {
+  let parsed: X402EscrowPaymentPayload;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(fromBase64(headerValue)));
+  } catch {
+    throw new Error('[suimpp/x402] X-PAYMENT header is not base64 JSON');
+  }
+  if (parsed.scheme !== X402_SCHEME) {
+    throw new Error(`[suimpp/x402] Unsupported scheme: ${parsed.scheme}`);
+  }
+  const p = parsed.payload;
+  if (!p?.jobId || !p?.buyerAddress) {
+    throw new Error(
+      '[suimpp/x402] Escrow X-PAYMENT payload missing jobId/buyerAddress',
+    );
+  }
+  if (!/^0x[0-9a-fA-F]{1,64}$/.test(p.jobId)) {
+    throw new Error(`[suimpp/x402] Malformed Job object id: ${p.jobId}`);
+  }
+  return parsed;
+}
+
+/** Discriminate escrow vs instant X-PAYMENT credentials without throwing —
+ *  sellers serving both classes route on this before parsing. */
+export function isX402EscrowHeader(headerValue: string): boolean {
+  try {
+    const parsed = JSON.parse(
+      new TextDecoder().decode(fromBase64(headerValue)),
+    );
+    return typeof parsed?.payload?.jobId === 'string';
+  } catch {
+    return false;
+  }
+}
+
 export interface X402PaymentPayload {
   x402Version: typeof X402_VERSION;
   scheme: typeof X402_SCHEME;
